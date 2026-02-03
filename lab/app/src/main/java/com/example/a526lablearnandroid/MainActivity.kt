@@ -132,7 +132,7 @@ class MainActivity : ComponentActivity() {
                                     ) {
                                     Image(
                                         painter = painterResource(id = R.drawable.baseline_remove_24),
-                                        contentDescription = "Increase",
+                                        contentDescription = "Decrease",
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
@@ -161,7 +161,7 @@ class MainActivity : ComponentActivity() {
                                     ) {
                                     Image(
                                         painter = painterResource(id = R.drawable.baseline_remove_24),
-                                        contentDescription = "Increase",
+                                        contentDescription = "Decrease",
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }

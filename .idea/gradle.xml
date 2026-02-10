@@ -6,7 +6,13 @@
       <GradleProjectSettings>
         <option name="testRunner" value="CHOOSE_PER_TEST" />
         <option name="externalProjectPath" value="$PROJECT_DIR$/lab" />
-        <option name="gradleJvm" value="ms-21" />
+        <option name="gradleJvm" value="#GRADLE_LOCAL_JAVA_HOME" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/lab" />
+            <option value="$PROJECT_DIR$/lab/app" />
+          </set>
+        </option>
       </GradleProjectSettings>
     </option>
     <option name="parallelModelFetch" value="true" />

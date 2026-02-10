@@ -1,67 +1,98 @@
 package com.example.a526lablearnandroid
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.DefaultTab.PhotosTab.value
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.example.a526lablearnandroid.ui.theme._526LabLearnAndroidTheme
 
 class TamJai : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            _526LabLearnAndroidTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting2(
-                        name = "TamJai",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                LifecycleDemo(
+                    onBack = { finish() },
+                    modifier = Modifier.padding(innerPadding)
+                )
             }
         }
     }
 }
 
 @Composable
-fun Greeting2(name: String, modifier: Modifier = Modifier) {
-    val inputtext = remember { mutableStateOf("") }
+fun LifecycleDemo(onBack: () -> Unit, modifier: Modifier = Modifier) {
+    var show by remember { mutableStateOf(true) }
+
+    Column(modifier = modifier) {
+        Button(onClick = { show = !show }) {
+            Text(if (show) "Hide" else "Show")
+        }
+
+        if (show) {
+            LifecycleComponent(onBack = onBack)
+        }
+    }
+}
+
+@Composable
+fun LifecycleComponent(onBack: () -> Unit) {
+    // State สำหรับ Recomposition
+    var text by remember { mutableStateOf("") }
+
+    // Log เมื่อ Recompose
+    SideEffect {
+        Log.d("ComposeLifecycle", "Recompose: $text")
+    }
+
+    // Log เมื่อ Enter/Leave
+    DisposableEffect(Unit) {
+        Log.d("ComposeLifecycle", "Enter Composition")
+        onDispose {
+            Log.d("ComposeLifecycle", "Leave Composition")
+        }
+    }
+
     Column {
-        Text(
-            text = "Hello $name! say = " + inputtext.value,
-            modifier = modifier,
-        )
+        Text(text = "Unstable State: $text")
         TextField(
-            value = inputtext.value,
-            onValueChange = {
-                inputtext.value = it
-            }
+            value = text,
+            onValueChange = { text = it },
+            label = { Text("Type to Recompose") }
         )
+
+        IconButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back"
+            )
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview2() {
-    _526LabLearnAndroidTheme {
-        Greeting2("Android2")
-    }
+    LifecycleDemo(onBack = {})
 }

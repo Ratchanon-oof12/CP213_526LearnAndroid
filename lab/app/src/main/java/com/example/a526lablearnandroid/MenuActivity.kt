@@ -42,6 +42,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
+import com.example.a526lablearnandroid.Architecture.CounterScreen
+import com.example.a526lablearnandroid.Architecture.CounterViewModel
+import com.example.a526lablearnandroid.util.SharedPreferenceActivity
 
 class MenuActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -117,11 +120,53 @@ class MenuActivity : ComponentActivity() {
                             .fillMaxWidth()
                             .height(80.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFF9800)
+                            containerColor = Color.Yellow
                         )
                     ) {
                         Text(
                             text = "Tam Jai",
+                            fontSize = 24.sp,
+                            color = Color.White
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ปุ่มไป SharedPreference
+                    Button(
+                        onClick = {
+                            startActivity(Intent(this@MenuActivity, SharedPreferenceActivity::class.java))
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFF9800)
+                        )
+                    ) {
+                        Text(
+                            text = "SharedPreferenceActivity",
+                            fontSize = 24.sp,
+                            color = Color.White
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ปุ่มไป CounterView
+                    Button(
+                        onClick = {
+                            startActivity(Intent(this@MenuActivity, CounterScreen::class.java))
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFF9800)
+                        )
+                    ) {
+                        Text(
+                            text = "CounterScreem",
                             fontSize = 24.sp,
                             color = Color.White
                         )

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -58,5 +59,11 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
+    // Firebase BOM (ตัวจัดการเวอร์ชั่น ให้มันเลือกเวอร์ชั่นที่เข้ากันได้เอง)
+    implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
+    // Cloud Firestore Library
+    implementation("com.google.firebase:firebase-firestore")
 }

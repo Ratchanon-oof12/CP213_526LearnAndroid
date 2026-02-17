@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "227095205305",
+    "project_id": "myclassroomapp-a92c2",
+    "storage_bucket": "myclassroomapp-a92c2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227095205305:android:c8ce7ae83974246b209268",
+        "android_client_info": {
+          "package_name": "com.example.a526lablearnandroid"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDD2c6KcltQh3atfzQgkn7x3yoWkMGjP1Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

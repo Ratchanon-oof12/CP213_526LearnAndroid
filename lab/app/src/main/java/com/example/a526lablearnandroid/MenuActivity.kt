@@ -171,6 +171,48 @@ class MenuActivity : ComponentActivity() {
                             color = Color.White
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ปุ่มไป Gallery Permission
+                    Button(
+                        onClick = {
+                            startActivity(Intent(this@MenuActivity, GalleryActivity::class.java))
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Magenta
+                        )
+                    ) {
+                        Text(
+                            text = "Gallery & Permission",
+                            fontSize = 24.sp,
+                            color = Color.White
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ปุ่มไป Sensor
+                    Button(
+                        onClick = {
+                            startActivity(Intent(this@MenuActivity, SensorActivity::class.java))
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Cyan
+                        )
+                    ) {
+                        Text(
+                            text = "Sensor (MVVM)",
+                            fontSize = 24.sp,
+                            color = Color.Black
+                        )
+                    }
                 }
             }
         }

@@ -17,6 +17,26 @@
         android:theme="@style/Theme._526LabLearnAndroid"
         tools:targetApi="31">
         <activity
+            android:name=".PartEleven"
+            android:exported="false"
+            android:label="@string/title_activity_part_eleven"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".Part12Activity"
+            android:exported="false"
+            android:label="Part12Activity"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".PartTen"
+            android:exported="false"
+            android:label="@string/title_activity_part_ten"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".PartNine"
+            android:exported="false"
+            android:label="@string/title_activity_part_nine"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
             android:name=".PartEight"
             android:exported="false"
             android:label="@string/title_activity_part_eight"
@@ -108,7 +128,18 @@
         <activity
             android:name=".SensorActivity"
             android:exported="false"
-            android:theme="@style/Theme._526LabLearnAndroid" />
+            android:theme="@style/Theme._526LabLearnAndroid" /> <!-- Receiver สำหรับ Glance Widget -->
+        <receiver
+            android:name=".MyGlanceWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/glance_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

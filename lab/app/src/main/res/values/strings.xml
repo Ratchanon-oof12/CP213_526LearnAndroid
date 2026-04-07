@@ -11,4 +11,7 @@
     <string name="title_activity_part_six">PartSix</string>
     <string name="title_activity_part_seven">PartSeven</string>
     <string name="title_activity_part_eight">PartEight</string>
+    <string name="title_activity_part_nine">PartNine</string>
+    <string name="title_activity_part_ten">PartTen</string>
+    <string name="title_activity_part_eleven">PartEleven</string>
 </resources>

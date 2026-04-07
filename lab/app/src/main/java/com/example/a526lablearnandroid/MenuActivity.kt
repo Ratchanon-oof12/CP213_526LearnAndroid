@@ -72,6 +72,10 @@ class MenuActivity : ComponentActivity() {
                     item { MenuButton("Part Six (WebView)") { startActivity(Intent(this@MenuActivity, PartSix::class.java)) } }
                     item { MenuButton("Part Seven (Activity Transition)") { startActivity(Intent(this@MenuActivity, MainActivity::class.java)) } }
                     item { MenuButton("Part Eight (Responsive Profile)") { startActivity(Intent(this@MenuActivity, PartEight::class.java)) } }
+                    item { MenuButton("Part Nine (Collapsing Layout)") { startActivity(Intent(this@MenuActivity, PartNine::class.java)) } }
+                    item { MenuButton("Part Ten (Glance Widget)") { startActivity(Intent(this@MenuActivity, PartTen::class.java)) } }
+                    item { MenuButton("Part Eleven (Skeleton Loading)") { startActivity(Intent(this@MenuActivity, PartEleven::class.java)) } }
+                    item { MenuButton("Part Twelve (Dialog & Bottom Sheet)") { startActivity(Intent(this@MenuActivity, Part12Activity::class.java)) } }
                 }
             }
         }

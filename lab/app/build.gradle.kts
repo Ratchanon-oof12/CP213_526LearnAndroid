@@ -69,4 +69,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
     // Cloud Firestore Library
     implementation("com.google.firebase:firebase-firestore")
+    
+    // Jetpack Glance (App Widget)
+    implementation("androidx.glance:glance-appwidget:1.1.0")
 }

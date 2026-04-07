@@ -3,4 +3,12 @@
     <string name="title_activity_tam_jai">TamJai</string>
     <string name="title_activity_shared_preference">SharedPreferenceActivity</string>
     <string name="title_activity_counter_screen.kt">CounterScreen.kt</string>
+    <string name="title_activity_part_one">PartOne</string>
+    <string name="title_activity_part_two">PartTwo</string>
+    <string name="title_activity_part_three">PartThree</string>
+    <string name="title_activity_part_four">PartFour</string>
+    <string name="title_activity_part_five">PartFive</string>
+    <string name="title_activity_part_six">PartSix</string>
+    <string name="title_activity_part_seven">PartSeven</string>
+    <string name="title_activity_part_eight">PartEight</string>
 </resources>

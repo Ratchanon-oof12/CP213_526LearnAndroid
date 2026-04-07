@@ -17,6 +17,51 @@
         android:theme="@style/Theme._526LabLearnAndroid"
         tools:targetApi="31">
         <activity
+            android:name=".PartEight"
+            android:exported="false"
+            android:label="@string/title_activity_part_eight"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:label="MainActivity"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".DetailActivity"
+            android:exported="false"
+            android:label="DetailActivity"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".PartSix"
+            android:exported="false"
+            android:label="@string/title_activity_part_six"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".PartFive"
+            android:exported="false"
+            android:label="@string/title_activity_part_five"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".PartFour"
+            android:exported="false"
+            android:label="@string/title_activity_part_four"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".PartThree"
+            android:exported="false"
+            android:label="@string/title_activity_part_three"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".PartTwo"
+            android:exported="false"
+            android:label="@string/title_activity_part_two"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
+            android:name=".PartOne"
+            android:exported="false"
+            android:label="@string/title_activity_part_one"
+            android:theme="@style/Theme._526LabLearnAndroid" />
+        <activity
             android:name=".Architecture.CounterScreen"
             android:exported="false"
             android:label="@string/title_activity_counter_screen.kt"

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.FinancialAssistant" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Configure the system splash screen to be solid blue and hide the green Android icon -->
+        <item name="android:windowSplashScreenBackground">#0047b3</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/transparent_icon</item>
+    </style>
+</resources>

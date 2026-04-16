@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Financial Architect - Category Management</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "background": "#f7f9fb",
+                    "inverse-on-surface": "#eff1f3",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#812800",
+                    "surface-dim": "#d8dadc",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed-variant": "#0040a2",
+                    "surface-container-highest": "#e0e3e5",
+                    "surface-container-high": "#e6e8ea",
+                    "primary-container": "#0052cc",
+                    "on-secondary-fixed": "#021945",
+                    "secondary": "#4c5d8d",
+                    "surface-container": "#eceef0",
+                    "tertiary-fixed": "#ffdbcf",
+                    "on-primary-fixed": "#001848",
+                    "on-tertiary": "#ffffff",
+                    "on-tertiary-fixed": "#380d00",
+                    "on-surface": "#191c1e",
+                    "tertiary-fixed-dim": "#ffb59b",
+                    "secondary-fixed-dim": "#b4c5fb",
+                    "surface-variant": "#e0e3e5",
+                    "on-primary-container": "#c4d2ff",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-surface-variant": "#434654",
+                    "surface": "#f7f9fb",
+                    "on-background": "#191c1e",
+                    "on-secondary-fixed-variant": "#344573",
+                    "secondary-fixed": "#dae2ff",
+                    "inverse-primary": "#b2c5ff",
+                    "error": "#ba1a1a",
+                    "primary-fixed-dim": "#b2c5ff",
+                    "surface-tint": "#0c56d0",
+                    "inverse-surface": "#2d3133",
+                    "tertiary": "#7b2600",
+                    "outline": "#737685",
+                    "tertiary-container": "#a33500",
+                    "primary": "#003d9b",
+                    "on-secondary-container": "#415382",
+                    "surface-container-low": "#f2f4f6",
+                    "surface-bright": "#f7f9fb",
+                    "primary-fixed": "#dae2ff",
+                    "error-container": "#ffdad6",
+                    "secondary-container": "#b6c8fe",
+                    "surface-container-lowest": "#ffffff",
+                    "outline-variant": "#c3c6d6",
+                    "on-tertiary-container": "#ffc6b2"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav-bg {
+            background: linear-gradient(135deg, #003d9b 0%, #0052cc 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-xl flex justify-between items-center px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="Professional headshot of a financial advisor in a light blue suit with a clean office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmjiX1kIHQSg159TEKwI0m39IzaViZBBkM8MEImPd9X6fvwUPdug3oNgitCFGsGKOWv3xn-hkWcaYZW8Qcil1lr1fznkit8wPNDDHidGGIxWZYgB3e54Ai1NWn_b-yeQ1cDDV_x2I52_avadNyvzaVxX4fgfKOiKJzbhYEN4p08hoeyCu-cNPYpPlyXZEoL0sZ1PmPmLrm5bOfjDO14jlIkhYwvkuBJcDmUgxf0fMSBPpPuFLsrTPsD5jJUC3JwjL-gzBxL1U-1Etr"/>
+</div>
+<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-50 font-headline">Financial Architect</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400" data-icon="settings">settings</span>
+</button>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-5xl mx-auto">
+<!-- Hero Section / Context -->
+<div class="mb-12">
+<h2 class="text-4xl font-extrabold font-headline tracking-tight text-primary mb-2">Category Library</h2>
+<p class="text-on-surface-variant font-medium">Organize your financial ecosystem with precision.</p>
+</div>
+<!-- Action Header -->
+<div class="flex justify-between items-end mb-8">
+<div class="space-y-1">
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Overview</span>
+<h3 class="text-xl font-bold font-headline text-on-surface">Active Categories</h3>
+</div>
+<button class="group flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-on-primary px-6 py-3 rounded-xl font-bold text-sm transition-all hover:shadow-lg active:scale-95">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+                Add New Category
+            </button>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Category Card: Essential -->
+<div class="md:col-span-2 bg-surface-container-lowest rounded-xl p-8 flex flex-col justify-between min-h-[220px] group cursor-pointer transition-colors hover:bg-white">
+<div class="flex justify-between items-start">
+<div class="p-4 bg-primary/5 rounded-2xl">
+<span class="material-symbols-outlined text-3xl text-primary" data-icon="home">home</span>
+</div>
+<button class="text-outline-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+</div>
+<div>
+<h4 class="text-2xl font-bold font-headline text-on-surface mb-1">Housing &amp; Rent</h4>
+<div class="flex items-center gap-4">
+<span class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">12 Transactions</span>
+<div class="h-1 w-1 rounded-full bg-outline-variant"></div>
+<span class="text-xs font-semibold text-primary">Monthly: $2,450.00</span>
+</div>
+</div>
+</div>
+<!-- Category Card: Transport -->
+<div class="bg-surface-container-low rounded-xl p-8 flex flex-col justify-between min-h-[220px] group cursor-pointer transition-all hover:bg-surface-container">
+<div class="flex justify-between items-start">
+<div class="p-4 bg-secondary/10 rounded-2xl">
+<span class="material-symbols-outlined text-3xl text-secondary" data-icon="directions_car">directions_car</span>
+</div>
+<button class="text-outline-variant hover:text-secondary transition-colors">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+</div>
+<div>
+<h4 class="text-xl font-bold font-headline text-on-surface mb-1">Transport</h4>
+<span class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">8 Transactions</span>
+</div>
+</div>
+<!-- Category Card: Food -->
+<div class="bg-surface-container-low rounded-xl p-8 flex flex-col justify-between min-h-[220px] group cursor-pointer transition-all hover:bg-surface-container">
+<div class="flex justify-between items-start">
+<div class="p-4 bg-tertiary-container/10 rounded-2xl">
+<span class="material-symbols-outlined text-3xl text-tertiary-container" data-icon="restaurant">restaurant</span>
+</div>
+<button class="text-outline-variant hover:text-tertiary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+</div>
+<div>
+<h4 class="text-xl font-bold font-headline text-on-surface mb-1">Dining Out</h4>
+<span class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">24 Transactions</span>
+</div>
+</div>
+<!-- Category Card: Entertainment (Large) -->
+<div class="md:col-span-2 bg-primary-container text-on-primary-container rounded-xl p-8 flex flex-col justify-between min-h-[220px] group cursor-pointer relative overflow-hidden">
+<div class="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+<span class="material-symbols-outlined text-[120px]" data-icon="local_activity">local_activity</span>
+</div>
+<div class="flex justify-between items-start relative z-10">
+<div class="p-4 bg-white/20 rounded-2xl backdrop-blur-md">
+<span class="material-symbols-outlined text-3xl" data-icon="local_activity">local_activity</span>
+</div>
+<button class="text-white/60 hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+</div>
+<div class="relative z-10">
+<h4 class="text-2xl font-bold font-headline mb-1">Entertainment</h4>
+<div class="flex items-center gap-4">
+<span class="text-xs font-semibold uppercase tracking-wider opacity-80">15 Transactions</span>
+<div class="h-1 w-1 rounded-full bg-white/40"></div>
+<span class="text-xs font-semibold">Budget Limit: $500.00</span>
+</div>
+</div>
+</div>
+<!-- Small Category: Utilities -->
+<div class="bg-surface-container-low rounded-xl p-6 flex items-center gap-5 group cursor-pointer transition-all hover:bg-surface-container">
+<div class="p-3 bg-white rounded-xl">
+<span class="material-symbols-outlined text-2xl text-primary" data-icon="bolt">bolt</span>
+</div>
+<div class="flex-1">
+<h4 class="font-bold font-headline text-on-surface">Utilities</h4>
+<p class="text-[10px] uppercase font-bold text-on-surface-variant">4 Subscriptions</p>
+</div>
+<button class="text-outline-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<!-- Small Category: Shopping -->
+<div class="bg-surface-container-low rounded-xl p-6 flex items-center gap-5 group cursor-pointer transition-all hover:bg-surface-container">
+<div class="p-3 bg-white rounded-xl">
+<span class="material-symbols-outlined text-2xl text-secondary" data-icon="shopping_bag">shopping_bag</span>
+</div>
+<div class="flex-1">
+<h4 class="font-bold font-headline text-on-surface">Shopping</h4>
+<p class="text-[10px] uppercase font-bold text-on-surface-variant">19 Transactions</p>
+</div>
+<button class="text-outline-variant hover:text-secondary opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<!-- Small Category: Health -->
+<div class="bg-surface-container-low rounded-xl p-6 flex items-center gap-5 group cursor-pointer transition-all hover:bg-surface-container">
+<div class="p-3 bg-white rounded-xl">
+<span class="material-symbols-outlined text-2xl text-error" data-icon="health_and_safety">health_and_safety</span>
+</div>
+<div class="flex-1">
+<h4 class="font-bold font-headline text-on-surface">Health</h4>
+<p class="text-[10px] uppercase font-bold text-on-surface-variant">2 Transactions</p>
+</div>
+<button class="text-outline-variant hover:text-error opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Analytical Insight Card -->
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.04)] rounded-t-3xl">
+<button class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2 hover:text-blue-600 transition-colors">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="text-[11px] font-semibold font-inter tracking-wide uppercase mt-1">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2 hover:text-blue-600 transition-colors">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="text-[11px] font-semibold font-inter tracking-wide uppercase mt-1">History</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2 hover:text-blue-600 transition-colors">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+<span class="text-[11px] font-semibold font-inter tracking-wide uppercase mt-1">Analytics</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-2xl px-5 py-2 scale-90 duration-200 transition-transform">
+<span class="material-symbols-outlined" data-icon="category" data-weight="fill">category</span>
+<span class="text-[11px] font-semibold font-inter tracking-wide uppercase mt-1">Categories</span>
+</button>
+</nav>
+</body></html>

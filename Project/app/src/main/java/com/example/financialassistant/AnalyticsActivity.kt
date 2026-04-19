@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,14 +20,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.financialassistant.data.CategorySummary
+import com.example.financialassistant.data.DaySummary
+import com.example.financialassistant.data.MonthSummary
 import com.example.financialassistant.ui.theme.FinancialAssistantTheme
+import java.text.SimpleDateFormat
+import java.util.*
+
+// Curated color palette for pie slices
+val pieColors = listOf(
+    Color(0xFF1E88E5), Color(0xFFE53935), Color(0xFF43A047),
+    Color(0xFFF4511E), Color(0xFF8E24AA), Color(0xFFF9A825),
+    Color(0xFF00ACC1), Color(0xFF6D4C41), Color(0xFF546E7A)
+)
 
 class AnalyticsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,12 +52,13 @@ class AnalyticsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FinancialAssistantTheme {
+                val vm: FinancialViewModel = viewModel()
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = { AnalyticsTopBar() },
                     bottomBar = { AnalyticsBottomBar() }
                 ) { innerPadding ->
-                    AnalyticsScreen(modifier = Modifier.padding(innerPadding))
+                    AnalyticsScreen(modifier = Modifier.padding(innerPadding), vm = vm)
                 }
             }
         }
@@ -49,454 +68,294 @@ class AnalyticsActivity : ComponentActivity() {
 @Composable
 fun AnalyticsTopBar() {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xE6F8FAFC))
-            .statusBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth().background(Color(0xE6F8FAFC))
+            .statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = CircleShape,
-                color = surfaceContainerLow
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Profile Picture",
-                    tint = Color.Gray,
-                    modifier = Modifier.padding(8.dp)
-                )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = surfaceContainerLow) {
+                Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
             }
-            Text(
-                text = "Financial Architect",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = onSurfaceColor
-            )
+            Text("Financial Architect", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
         }
-        IconButton(
-            onClick = { /* TODO */ },
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Settings",
-                tint = onSurfaceVariantColor
-            )
+        IconButton(onClick = {}, modifier = Modifier.size(40.dp).clip(CircleShape)) {
+            Icon(Icons.Default.Settings, "Settings", tint = onSurfaceVariantColor)
         }
     }
 }
 
 @Composable
-fun AnalyticsScreen(modifier: Modifier = Modifier) {
+fun AnalyticsScreen(modifier: Modifier = Modifier, vm: FinancialViewModel) {
     val scrollState = rememberScrollState()
+    val categoryData by vm.categoryExpenseSummary.collectAsState()
+    val dailyData by vm.dailyExpenseSummary.collectAsState()
+    val monthlyData by vm.monthlyExpenseSummary.collectAsState()
+    val monthlyIncome by vm.monthlyIncome.collectAsState()
+    val monthlyExpense by vm.monthlyExpense.collectAsState()
+    val selectedYear by vm.selectedYear.collectAsState()
+    val selectedMonth by vm.selectedMonth.collectAsState()
+    var barMode by remember { mutableStateOf("DAILY") } // DAILY or MONTHLY
+
+    // Month picker state
+    val currentDate = remember { Calendar.getInstance() }
+    var pickerYear by remember { mutableStateOf(currentDate.get(Calendar.YEAR)) }
+    var pickerMonth by remember { mutableStateOf(currentDate.get(Calendar.MONTH) + 1) } // 1-based
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(surfaceColor)
-            .verticalScroll(scrollState)
-            .padding(horizontal = 24.dp, vertical = 16.dp)
+        modifier = modifier.fillMaxSize().background(surfaceColor)
+            .verticalScroll(scrollState).padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        AnalyticsHeader()
-        Spacer(modifier = Modifier.height(32.dp))
-        SummaryBentoGrid()
-        Spacer(modifier = Modifier.height(32.dp))
-        ChartSection()
-        Spacer(modifier = Modifier.height(32.dp))
-        BreakdownList()
-        Spacer(modifier = Modifier.height(48.dp))
-    }
-}
+        // Header
+        Text("FINANCIAL ANALYSIS", fontSize = 12.sp, fontWeight = FontWeight.Medium,
+            color = onSurfaceVariantColor, letterSpacing = 2.sp)
+        Spacer(Modifier.height(8.dp))
+        Text("Spending Architecture", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = onSurfaceColor, lineHeight = 36.sp)
+        Spacer(Modifier.height(24.dp))
 
-@Composable
-fun AnalyticsHeader() {
-    Column {
-        Text(
-            text = "FINANCIAL ANALYSIS",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = onSurfaceVariantColor,
-            letterSpacing = 2.sp,
-            modifier = Modifier.padding(start = 8.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Spending Architecture",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = onSurfaceColor,
-            lineHeight = 36.sp,
-            modifier = Modifier.padding(start = 8.dp)
-        )
-    }
-}
-
-@Composable
-fun SummaryBentoGrid() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Income
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = surfaceContainerLowest,
-            modifier = Modifier.weight(1f)
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(Color(0xFFDAE2FF), RoundedCornerShape(10.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.ArrowDownward, contentDescription = null, tint = primaryColor, modifier = Modifier.size(20.dp))
-                    }
-                    Surface(
-                        color = Color(0xFFDAE2FF),
-                        shape = CircleShape
-                    ) {
-                        Text(
-                            "Total Income",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = primaryColor,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
+        // Month Picker
+        MonthPicker(
+            year = pickerYear, month = pickerMonth,
+            onPrevious = {
+                if (pickerMonth == 1) { pickerYear--; pickerMonth = 12 } else pickerMonth--
+                vm.selectMonth(pickerYear.toString(), "%02d".format(pickerMonth))
+            },
+            onNext = {
+                val now = Calendar.getInstance()
+                if (pickerYear < now.get(Calendar.YEAR) || (pickerYear == now.get(Calendar.YEAR) && pickerMonth < now.get(Calendar.MONTH) + 1)) {
+                    if (pickerMonth == 12) { pickerYear++; pickerMonth = 1 } else pickerMonth++
+                    vm.selectMonth(pickerYear.toString(), "%02d".format(pickerMonth))
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = "Current Month",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = onSurfaceVariantColor
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "$12,450.00",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = onSurfaceColor
-                )
+            }
+        )
+        Spacer(Modifier.height(24.dp))
+
+        // Summary Cards
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            SummaryCard(label = "Income", value = "฿${"%.2f".format(monthlyIncome)}", color = primaryColor, modifier = Modifier.weight(1f))
+            SummaryCard(label = "Expense", value = "฿${"%.2f".format(monthlyExpense)}", color = Color(0xFFBA1A1A), modifier = Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(12.dp))
+        val balance = monthlyIncome - monthlyExpense
+        Surface(shape = RoundedCornerShape(12.dp), color = surfaceContainerLowest, modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Net Balance", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+                Text("฿${"%.2f".format(balance)}", fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                    color = if (balance >= 0) primaryColor else Color(0xFFBA1A1A))
             }
         }
-        
-        // Expenses
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = surfaceContainerLowest,
-            modifier = Modifier.weight(1f)
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(Color(0xFFFFDAD6), RoundedCornerShape(10.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.ArrowUpward, contentDescription = null, tint = Color(0xFFBA1A1A), modifier = Modifier.size(20.dp))
+        Spacer(Modifier.height(32.dp))
+
+        // PIE CHART
+        Surface(shape = RoundedCornerShape(20.dp), color = surfaceContainerLowest, modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Spending by Category", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+                Spacer(Modifier.height(4.dp))
+                Text("Where your money goes this month", fontSize = 12.sp, color = onSurfaceVariantColor)
+                Spacer(Modifier.height(24.dp))
+                if (categoryData.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.PieChart, null, tint = onSurfaceVariantColor.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
+                            Spacer(Modifier.height(8.dp))
+                            Text("No expense data yet", color = onSurfaceVariantColor, fontSize = 14.sp)
+                        }
                     }
-                    Surface(
-                        color = Color(0xFFFFDAD6).copy(alpha = 0.5f),
-                        shape = CircleShape
-                    ) {
-                        Text(
-                            "Total Expenses",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFBA1A1A),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
+                } else {
+                    PieChart(data = categoryData)
+                    Spacer(Modifier.height(20.dp))
+                    PieLegend(data = categoryData)
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = "Current Month",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = onSurfaceVariantColor
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "$8,215.42",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = onSurfaceColor
-                )
             }
         }
-    }
-}
+        Spacer(Modifier.height(24.dp))
 
-@Composable
-fun ChartSection() {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column {
-                    Text(
-                        text = "Weekly Spending Trend",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = onSurfaceColor
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Reviewing outflows from the past 7 weeks",
-                        fontSize = 12.sp,
-                        color = onSurfaceVariantColor
-                    )
-                }
-                
-                // Toggle
-                Row(
-                    modifier = Modifier
-                        .background(Color(0xFFE6E8EA), RoundedCornerShape(8.dp))
-                        .padding(4.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(surfaceContainerLowest)
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text("WEEKLY", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = primaryColor)
+        // BAR CHART
+        Surface(shape = RoundedCornerShape(20.dp), color = surfaceContainerLowest, modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                    Column {
+                        Text("Spending Over Time", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+                        Spacer(Modifier.height(4.dp))
+                        Text(if (barMode == "DAILY") "Daily expenses this month" else "Monthly expenses (last 12mo)", fontSize = 12.sp, color = onSurfaceVariantColor)
                     }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text("MONTHLY", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = onSurfaceVariantColor)
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            // Chart mock
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                val data = listOf(
-                    Triple("W1", 0.4f, "$1.2k"),
-                    Triple("W2", 0.65f, "$2.1k"),
-                    Triple("W3", 0.55f, "$1.8k"),
-                    Triple("W4", 0.85f, "$3.4k"),
-                    Triple("W5", 0.95f, "$4.1k"), // highlight
-                    Triple("W6", 0.45f, "$1.4k"),
-                    Triple("W7", 0.3f, "$0.9k")
-                )
-                
-                data.forEachIndexed { index, item ->
-                    val isHighlighted = index == 4
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Bottom
-                    ) {
-                        if (isHighlighted) {
-                            Surface(
-                                color = onSurfaceColor,
-                                shape = RoundedCornerShape(4.dp),
-                                modifier = Modifier.padding(bottom = 8.dp)
+                    // Toggle
+                    Row(modifier = Modifier.background(Color(0xFFE6E8EA), RoundedCornerShape(8.dp)).padding(4.dp)) {
+                        listOf("DAILY", "MONTHLY").forEach { mode ->
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                                    .background(if (barMode == mode) surfaceContainerLowest else Color.Transparent)
+                                    .clickable { barMode = mode }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
-                                Text(
-                                    item.third,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
+                                Text(mode, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                                    color = if (barMode == mode) primaryColor else onSurfaceVariantColor)
                             }
                         }
-                        
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(0.9f)
-                                .fillMaxHeight(item.second)
-                                .background(
-                                    brush = if (isHighlighted) Brush.verticalGradient(listOf(primaryContainerColor, primaryColor)) else Brush.verticalGradient(listOf(primaryColor.copy(alpha = 0.2f), primaryColor.copy(alpha = 0.2f))),
-                                    shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
-                                )
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = item.first,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isHighlighted) primaryColor else onSurfaceVariantColor
-                        )
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+                if (barMode == "DAILY") {
+                    if (dailyData.isEmpty()) {
+                        EmptyChartPlaceholder()
+                    } else {
+                        BarChart(labels = dailyData.map { it.day }, values = dailyData.map { it.total.toFloat() })
+                    }
+                } else {
+                    if (monthlyData.isEmpty()) {
+                        EmptyChartPlaceholder()
+                    } else {
+                        BarChart(labels = monthlyData.map { it.month.takeLast(2) }, values = monthlyData.map { it.total.toFloat() })
                     }
                 }
             }
         }
+        Spacer(Modifier.height(48.dp))
     }
 }
 
 @Composable
-fun BreakdownList() {
+fun MonthPicker(year: Int, month: Int, onPrevious: () -> Unit, onNext: () -> Unit) {
+    val monthName = SimpleDateFormat("MMMM", Locale.getDefault()).apply {
+        timeZone = TimeZone.getDefault()
+    }.format(Calendar.getInstance().also { it.set(Calendar.MONTH, month - 1) }.time)
+
+    Row(
+        modifier = Modifier.fillMaxWidth().background(surfaceContainerLowest, RoundedCornerShape(12.dp)).padding(8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onPrevious) { Icon(Icons.Default.ChevronLeft, "Previous month", tint = primaryColor) }
+        Text("$monthName $year", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+        IconButton(onClick = onNext) { Icon(Icons.Default.ChevronRight, "Next month", tint = primaryColor) }
+    }
+}
+
+@Composable
+fun PieChart(data: List<CategorySummary>) {
+    val total = data.sumOf { it.total }
+    var startAngle = -90f
+
+    Box(modifier = Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.size(200.dp)) {
+            val diameter = size.minDimension
+            val radius = diameter / 2
+            val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+            val arcSize = Size(diameter, diameter)
+            val strokeWidth = diameter * 0.22f
+
+            data.forEachIndexed { index, item ->
+                val sweep = ((item.total / total) * 360f).toFloat()
+                val color = pieColors[index % pieColors.size]
+                drawArc(color = color, startAngle = startAngle, sweepAngle = sweep,
+                    useCenter = false, topLeft = topLeft, size = arcSize,
+                    style = Stroke(width = strokeWidth))
+                startAngle += sweep
+            }
+        }
+        // Center text
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Total", fontSize = 12.sp, color = onSurfaceVariantColor)
+            Text("฿${"%.0f".format(total)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+        }
+    }
+}
+
+@Composable
+fun PieLegend(data: List<CategorySummary>) {
+    val total = data.sumOf { it.total }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        data.forEachIndexed { index, item ->
+            val color = pieColors[index % pieColors.size]
+            val pct = if (total > 0) (item.total / total * 100).toInt() else 0
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(12.dp).background(color, CircleShape))
+                Spacer(Modifier.width(10.dp))
+                Text(item.categoryName, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = onSurfaceColor, modifier = Modifier.weight(1f))
+                Text("$pct%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = color)
+                Spacer(Modifier.width(8.dp))
+                Text("฿${"%.2f".format(item.total)}", fontSize = 12.sp, color = onSurfaceVariantColor)
+            }
+        }
+    }
+}
+
+@Composable
+fun BarChart(labels: List<String>, values: List<Float>) {
+    val maxValue = values.maxOrNull() ?: 1f
+    val barCount = values.size
+
     Column {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth().height(160.dp),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                text = "Category Breakdown",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = onSurfaceColor
-            )
-            Text(
-                text = "View All",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = primaryColor
-            )
+            values.forEachIndexed { index, value ->
+                val fraction = if (maxValue > 0) value / maxValue else 0f
+                val isMax = value == maxValue
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    if (isMax) {
+                        Surface(color = onSurfaceColor, shape = RoundedCornerShape(4.dp), modifier = Modifier.padding(bottom = 4.dp)) {
+                            Text("฿${"%.0f".format(value)}", fontSize = 8.sp, fontWeight = FontWeight.Bold,
+                                color = Color.White, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                        }
+                    }
+                    Box(
+                        modifier = Modifier.weight(fraction.coerceAtLeast(0.03f), fill = false)
+                            .fillMaxWidth(0.85f)
+                            .fillMaxHeight(fraction.coerceAtLeast(0.03f))
+                            .background(
+                                brush = if (isMax) Brush.verticalGradient(listOf(primaryContainerColor, primaryColor))
+                                else Brush.verticalGradient(listOf(primaryColor.copy(alpha = 0.25f), primaryColor.copy(alpha = 0.15f))),
+                                shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
+                            )
+                    )
+                }
+            }
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            BreakdownItem(
-                icon = Icons.Default.Restaurant,
-                title = "Dining & Groceries",
-                subtitle = "18 Transactions",
-                amount = "$1,240.50",
-                statusText = "12% Over",
-                statusColor = Color(0xFFBA1A1A)
-            )
-            BreakdownItem(
-                icon = Icons.Default.Home,
-                title = "Housing & Rent",
-                subtitle = "2 Transactions",
-                amount = "$3,200.00",
-                statusText = "On Budget",
-                statusColor = primaryColor
-            )
-            BreakdownItem(
-                icon = Icons.Default.ShoppingBag,
-                title = "Lifestyle & Shopping",
-                subtitle = "34 Transactions",
-                amount = "$890.15",
-                statusText = "8% Under",
-                statusColor = Color(0xFF4C5D8D) // secondary
-            )
+        Spacer(Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            labels.forEach { label ->
+                Text(label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = onSurfaceVariantColor,
+                    textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+            }
         }
     }
 }
 
 @Composable
-fun BreakdownItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    amount: String,
-    statusText: String,
-    statusColor: Color
-) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = surfaceContainerLowest,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(Color(0xFFE0E3E5), RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icon, contentDescription = null, tint = onSurfaceVariantColor)
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
-                    Text(subtitle, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = onSurfaceVariantColor)
-                }
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(amount, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Box(modifier = Modifier.size(6.dp).background(statusColor, CircleShape))
-                    Text(statusText.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = statusColor, letterSpacing = 1.sp)
-                }
-            }
+fun EmptyChartPlaceholder() {
+    Box(modifier = Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.BarChart, null, tint = onSurfaceVariantColor.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
+            Spacer(Modifier.height(8.dp))
+            Text("No data yet for this period", color = onSurfaceVariantColor, fontSize = 14.sp)
         }
     }
 }
 
 fun navigateWithFadeFromAnalytics(context: android.content.Context, targetClass: Class<*>) {
-    val intent = android.content.Intent(context, targetClass).apply { 
-        flags = android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP 
-    }
+    val intent = android.content.Intent(context, targetClass).apply { flags = android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP }
     val options = android.app.ActivityOptions.makeCustomAnimation(context, android.R.anim.fade_in, android.R.anim.fade_out).toBundle()
     androidx.core.content.ContextCompat.startActivity(context, intent, options)
 }
 
 @Composable
 fun AnalyticsBottomBar() {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White)
+        modifier = Modifier.fillMaxWidth().background(Color.White)
             .shadow(24.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .navigationBarsPadding(),
-        horizontalArrangement = Arrangement.SpaceAround,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 12.dp).navigationBarsPadding(),
+        horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically
     ) {
-        BottomBarItemAnalytics("Home", Icons.Default.AddCircle, false) {
-            navigateWithFadeFromAnalytics(context, QuickAddActivity::class.java)
-        }
-        BottomBarItemAnalytics("History", Icons.Default.Refresh, false) {
-            navigateWithFadeFromAnalytics(context, HistoryActivity::class.java)
-        }
+        BottomBarItemAnalytics("Home", Icons.Default.AddCircle, false) { navigateWithFadeFromAnalytics(context, QuickAddActivity::class.java) }
+        BottomBarItemAnalytics("History", Icons.Default.Refresh, false) { navigateWithFadeFromAnalytics(context, HistoryActivity::class.java) }
         BottomBarItemAnalytics("Analytics", Icons.Default.BarChart, true) {}
-        BottomBarItemAnalytics("Categories", Icons.Default.List, false) {
-            navigateWithFadeFromAnalytics(context, CategoryActivity::class.java)
-        }
+        BottomBarItemAnalytics("Categories", Icons.Default.List, false) { navigateWithFadeFromAnalytics(context, CategoryActivity::class.java) }
     }
 }
 
@@ -504,25 +363,13 @@ fun AnalyticsBottomBar() {
 fun BottomBarItemAnalytics(label: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+        modifier = Modifier.clip(RoundedCornerShape(16.dp))
             .background(if (isSelected) Color(0xFFEFF6FF) else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 8.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = if (isSelected) primaryContainerColor else Color.Gray,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = label.uppercase(),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (isSelected) primaryContainerColor else Color.Gray,
-            letterSpacing = 1.sp
-        )
+        Icon(icon, label, tint = if (isSelected) primaryContainerColor else Color.Gray, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(label.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+            color = if (isSelected) primaryContainerColor else Color.Gray, letterSpacing = 1.sp)
     }
 }

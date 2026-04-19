@@ -70,12 +70,21 @@ class WelcomeActivity : ComponentActivity() {
 
 @Composable
 fun WelcomeScreen(modifier: Modifier = Modifier, innerPadding: PaddingValues = PaddingValues(0.dp), onGetStartedClick: () -> Unit = {}) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val sharedPrefs = context.getSharedPreferences("financial_prefs", android.content.Context.MODE_PRIVATE)
+    
+    val savedName = sharedPrefs.getString("username", null)
+    var username by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(savedName ?: "") }
+    var needsInput by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(savedName == null) }
+    
     val scrollState = rememberScrollState()
     var isLoading by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
     
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(1200)
-        isLoading = false
+    androidx.compose.runtime.LaunchedEffect(needsInput) {
+        if (!needsInput) {
+            kotlinx.coroutines.delay(1200)
+            isLoading = false
+        }
     }
 
     val contentAlpha by androidx.compose.animation.core.animateFloatAsState(
@@ -118,12 +127,67 @@ fun WelcomeScreen(modifier: Modifier = Modifier, innerPadding: PaddingValues = P
             AIOrb(isLoading = isLoading)
             Spacer(modifier = Modifier.height(32.dp))
             Column(modifier = Modifier.alpha(contentAlpha), horizontalAlignment = Alignment.CenterHorizontally) {
-                GreetingSection(onGetStartedClick = onGetStartedClick)
+                GreetingSection(username = username, onGetStartedClick = onGetStartedClick)
                 Spacer(modifier = Modifier.height(48.dp))
                 FeatureBento()
                 Spacer(modifier = Modifier.height(48.dp))
                 WelcomeFooter()
                 Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 24.dp))
+            }
+        }
+
+        // Overlay for Username Input when required
+        androidx.compose.animation.AnimatedVisibility(
+            visible = needsInput,
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut(),
+            modifier = Modifier.matchParentSize().zIndex(20f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    var inputText by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+                    Text(
+                        text = "Nice to meet you.",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        placeholder = { Text("Enter your name", color = Color.White.copy(alpha = 0.5f)) },
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.White,
+                            unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f),
+                            cursorColor = Color.White
+                        ),
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        ),
+                        modifier = Modifier.fillMaxWidth(0.8f)
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Button(
+                        onClick = {
+                            if (inputText.isNotBlank()) {
+                                sharedPrefs.edit().putString("username", inputText.trim()).apply()
+                                username = inputText.trim()
+                                needsInput = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Continue", color = primaryColor, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }
@@ -219,8 +283,8 @@ fun AIOrb(isLoading: Boolean = false) {
 }
 
 @Composable
-fun GreetingSection(onGetStartedClick: () -> Unit = {}) {
-    val text1 = "Hello!"
+fun GreetingSection(username: String, onGetStartedClick: () -> Unit = {}) {
+    val text1 = "Hello, $username!"
     val text2 = "I'm your Financial Architect."
     val text3 = "Let’s build your foundation of wealth through precision clarity and intentional design."
     

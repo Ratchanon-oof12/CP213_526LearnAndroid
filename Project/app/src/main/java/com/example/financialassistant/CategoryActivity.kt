@@ -1,6 +1,5 @@
 package com.example.financialassistant
 
-import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Intent
 import android.os.Bundle
@@ -10,10 +9,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -30,7 +32,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.financialassistant.data.Category
 import com.example.financialassistant.ui.theme.FinancialAssistantTheme
+
+// Available icons for category creation
+val availableIcons = listOf(
+    "Restaurant" to Icons.Default.Restaurant,
+    "DirectionsCar" to Icons.Default.DirectionsCar,
+    "ShoppingBag" to Icons.Default.ShoppingBag,
+    "Favorite" to Icons.Default.Favorite,
+    "Movie" to Icons.Default.Movie,
+    "School" to Icons.Default.School,
+    "Bolt" to Icons.Default.Bolt,
+    "AccountBalance" to Icons.Default.AccountBalance,
+    "Home" to Icons.Default.Home,
+    "LocalCafe" to Icons.Default.LocalCafe,
+    "FitnessCenter" to Icons.Default.FitnessCenter,
+    "Flight" to Icons.Default.Flight,
+    "MoreHoriz" to Icons.Default.MoreHoriz
+)
+
+val availableColors = listOf(
+    "#E53935", "#1E88E5", "#43A047", "#F4511E", "#8E24AA",
+    "#F9A825", "#00ACC1", "#6D4C41", "#546E7A", "#0047b3", "#A33500"
+)
 
 class CategoryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,12 +64,13 @@ class CategoryActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FinancialAssistantTheme {
+                val vm: FinancialViewModel = viewModel()
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = { CategoryTopBar() },
                     bottomBar = { CategoryBottomBar() }
                 ) { innerPadding ->
-                    CategoryScreen(modifier = Modifier.padding(innerPadding))
+                    CategoryScreen(modifier = Modifier.padding(innerPadding), vm = vm)
                 }
             }
         }
@@ -53,330 +80,227 @@ class CategoryActivity : ComponentActivity() {
 @Composable
 fun CategoryTopBar() {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xE6F8FAFC))
-            .statusBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth().background(Color(0xE6F8FAFC))
+            .statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = CircleShape,
-                color = surfaceContainerLow
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Profile Picture",
-                    tint = Color.Gray,
-                    modifier = Modifier.padding(8.dp)
-                )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = surfaceContainerLow) {
+                Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
             }
-            Text(
-                text = "Financial Architect",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = onSurfaceColor
-            )
+            Text("Financial Architect", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
         }
-        IconButton(
-            onClick = { /* TODO */ },
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Settings",
-                tint = onSurfaceVariantColor
-            )
+        IconButton(onClick = {}, modifier = Modifier.size(40.dp).clip(CircleShape)) {
+            Icon(Icons.Default.Settings, "Settings", tint = onSurfaceVariantColor)
         }
     }
 }
 
 @Composable
-fun CategoryScreen(modifier: Modifier = Modifier) {
-    val scrollState = rememberScrollState()
+fun CategoryScreen(modifier: Modifier = Modifier, vm: FinancialViewModel) {
+    val categories by vm.categories.collectAsState()
+    var showAddDialog by remember { mutableStateOf(false) }
+    var categoryToDelete by remember { mutableStateOf<Category?>(null) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(surfaceColor)
-            .verticalScroll(scrollState)
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-    ) {
-        HeroSection()
-        Spacer(modifier = Modifier.height(32.dp))
-        ActionHeader()
-        Spacer(modifier = Modifier.height(24.dp))
-        BentoGrid()
-        Spacer(modifier = Modifier.height(48.dp))
-    }
-}
-
-@Composable
-fun HeroSection() {
-    Column {
-        Text(
-            text = "Category Library",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = primaryColor,
-            letterSpacing = (-0.5).sp
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Organize your financial ecosystem with precision.",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = onSurfaceVariantColor
+    // Add Dialog
+    if (showAddDialog) {
+        AddCategoryDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { name, iconName, colorHex ->
+                vm.addCategory(Category(name = name, iconName = iconName, colorHex = colorHex))
+                showAddDialog = false
+            }
         )
     }
-}
 
-@Composable
-fun ActionHeader() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom
-    ) {
-        Column {
-            Text(
-                text = "OVERVIEW",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp,
-                color = primaryColor
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Active Categories",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = onSurfaceColor
-            )
-        }
-        
-        Button(
-            onClick = { /* TODO */ },
-            shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent
-            ),
-            contentPadding = PaddingValues(0.dp),
-            modifier = Modifier.height(32.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(primaryColor, primaryContainerColor)
-                        ),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    .padding(horizontal = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Add New Category", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+    // Delete confirmation
+    categoryToDelete?.let { cat ->
+        AlertDialog(
+            onDismissRequest = { categoryToDelete = null },
+            title = { Text("Delete Category") },
+            text = { Text("Delete \"${cat.name}\"? This will not delete existing transactions.") },
+            confirmButton = {
+                TextButton(onClick = { vm.deleteCategory(cat); categoryToDelete = null }) {
+                    Text("Delete", color = Color(0xFFBA1A1A))
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun BentoGrid() {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Essential (Full width on mobile normally, but mapped for single col constraint as standard)
-        CategoryCardLarge(
-            title = "Housing & Rent",
-            subtitle = "12 Transactions",
-            detail = "Monthly: $2,450.00",
-            icon = Icons.Default.Home,
-            iconColor = primaryColor,
-            iconBg = primaryColor.copy(alpha = 0.05f),
-            detailColor = primaryColor,
-            indicatorColor = Color(0xFFC3C6D6)
+            },
+            dismissButton = { TextButton(onClick = { categoryToDelete = null }) { Text("Cancel") } }
         )
-        
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            CategoryCardSmall(
-                title = "Transport",
-                subtitle = "8 Transactions",
-                icon = Icons.Default.DirectionsCar,
-                iconColor = Color(0xFF4C5D8D), // secondary
-                iconBg = Color(0xFF4C5D8D).copy(alpha = 0.1f),
-                modifier = Modifier.weight(1f)
-            )
-            CategoryCardSmall(
-                title = "Dining Out",
-                subtitle = "24 Transactions",
-                iconColor = Color(0xFFA33500),
-                icon = Icons.Default.Restaurant,
-                iconBg = Color(0xFFA33500).copy(alpha = 0.1f),
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        // Entertainment
-        CategoryCardEntertainment()
-        
-        // Minor categories list
-        SmallCategoryRow(title = "Utilities", subtitle = "4 Subscriptions", icon = Icons.Default.Bolt, iconColor = primaryColor)
-        SmallCategoryRow(title = "Shopping", subtitle = "19 Transactions", icon = Icons.Default.ShoppingBag, iconColor = Color(0xFF4C5D8D))
-        SmallCategoryRow(title = "Health", subtitle = "2 Transactions", icon = Icons.Default.HealthAndSafety, iconColor = Color(0xFFBA1A1A))
     }
-}
 
-@Composable
-fun CategoryCardLarge(
-    title: String, subtitle: String, detail: String,
-    icon: ImageVector, iconColor: Color, iconBg: Color,
-    detailColor: Color, indicatorColor: Color
-) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = surfaceContainerLowest,
-        modifier = Modifier.fillMaxWidth().clickable { }
+    LazyColumn(
+        modifier = modifier.fillMaxSize().background(surfaceColor),
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        Column(modifier = Modifier.padding(24.dp).heightIn(min = 160.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                Box(modifier = Modifier.size(56.dp).background(iconBg, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(32.dp))
-                }
-                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = onSurfaceVariantColor.copy(alpha = 0.5f))
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            Column {
-                Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(subtitle.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = onSurfaceVariantColor, letterSpacing = 1.sp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(modifier = Modifier.size(4.dp).background(indicatorColor, CircleShape))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(detail, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = detailColor)
-                }
-            }
-        }
-    }
-}
+        item {
+            // Hero
+            Text("Category Library", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = primaryColor, letterSpacing = (-0.5).sp)
+            Spacer(Modifier.height(4.dp))
+            Text("Organize your financial ecosystem with precision.", fontSize = 14.sp, color = onSurfaceVariantColor)
+            Spacer(Modifier.height(24.dp))
 
-@Composable
-fun CategoryCardSmall(
-    title: String, subtitle: String, 
-    iconColor: Color, iconBg: Color,
-    iconVector: ImageVector? = null,
-    icon: ImageVector? = null,
-    modifier: Modifier = Modifier
-) {
-    val actualIconColor = if(icon == null) iconColor else iconColor
-    val actualIcon = icon ?: iconVector ?: Icons.Default.Category
-    
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = surfaceContainerLow,
-        modifier = modifier.clickable { }
-    ) {
-        Column(modifier = Modifier.padding(24.dp).heightIn(min = 160.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                Box(modifier = Modifier.size(56.dp).background(iconBg, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                    Icon(actualIcon, contentDescription = null, tint = actualIconColor, modifier = Modifier.size(32.dp))
-                }
-                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = onSurfaceVariantColor.copy(alpha = 0.5f))
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Column {
-                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(subtitle.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = onSurfaceVariantColor, letterSpacing = 1.sp)
-            }
-        }
-    }
-}
-
-@Composable
-fun CategoryCardEntertainment() {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = primaryContainerColor,
-        modifier = Modifier.fillMaxWidth().clickable { }
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Icon(
-                Icons.Default.LocalActivity, contentDescription = null,
-                tint = Color.White.copy(alpha = 0.1f),
-                modifier = Modifier.align(Alignment.TopEnd).size(120.dp).offset(x = 20.dp, y = (-20).dp)
-            )
-            
-            Column(modifier = Modifier.padding(24.dp).heightIn(min = 160.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                    Box(modifier = Modifier.size(56.dp).background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.LocalActivity, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
-                    }
-                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White.copy(alpha = 0.6f))
-                }
-                Spacer(modifier = Modifier.height(24.dp))
+            // Header Row
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("Entertainment", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("15 TRANSACTIONS", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Color.White.copy(alpha = 0.8f), letterSpacing = 1.sp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(modifier = Modifier.size(4.dp).background(Color.White.copy(alpha = 0.4f), CircleShape))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Budget Limit: $500.00", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                    }
+                    Text("OVERVIEW", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = primaryColor)
+                    Spacer(Modifier.height(4.dp))
+                    Text("${categories.size} Active Categories", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun SmallCategoryRow(title: String, subtitle: String, icon: ImageVector, iconColor: Color) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth().clickable { }
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(48.dp).background(Color.White, RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
+                Button(
+                    onClick = { showAddDialog = true },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.height(36.dp)
                 ) {
-                    Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
-                    Text(subtitle.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = onSurfaceVariantColor)
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                            .background(Brush.linearGradient(listOf(primaryColor, primaryContainerColor)), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Add Category", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
                 }
             }
-            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = onSurfaceVariantColor)
+            Spacer(Modifier.height(24.dp))
         }
+
+        if (categories.isEmpty()) {
+            item {
+                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 64.dp), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Category, null, tint = onSurfaceVariantColor.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
+                        Spacer(Modifier.height(16.dp))
+                        Text("No categories yet", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = onSurfaceVariantColor)
+                        Text("Tap 'Add Category' to get started", fontSize = 14.sp, color = onSurfaceVariantColor.copy(alpha = 0.7f))
+                    }
+                }
+            }
+        }
+
+        items(categories, key = { it.id }) { cat ->
+            val color = parseHexColor(cat.colorHex)
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = surfaceContainerLowest,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(52.dp).background(color.copy(alpha = 0.12f), RoundedCornerShape(14.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(iconForName(cat.iconName), null, tint = color, modifier = Modifier.size(28.dp))
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text(cat.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+                            if (cat.isDefault) {
+                                Text("DEFAULT", fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                                    color = primaryColor.copy(alpha = 0.6f), letterSpacing = 1.sp)
+                            }
+                        }
+                    }
+                    if (!cat.isDefault) {
+                        IconButton(onClick = { categoryToDelete = cat }) {
+                            Icon(Icons.Default.Delete, "Delete", tint = Color(0xFFBA1A1A).copy(alpha = 0.7f))
+                        }
+                    }
+                }
+            }
+        }
+
+        item { Spacer(Modifier.height(48.dp)) }
     }
+}
+
+@Composable
+fun AddCategoryDialog(onDismiss: () -> Unit, onConfirm: (String, String, String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var selectedIcon by remember { mutableStateOf(availableIcons.first()) }
+    var selectedColor by remember { mutableStateOf(availableColors.first()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New Category", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = name, onValueChange = { name = it },
+                    label = { Text("Category Name") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryColor)
+                )
+
+                Text("Choose Icon", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = onSurfaceVariantColor)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(5),
+                    modifier = Modifier.height(100.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    gridItems(availableIcons) { pair ->
+                        val iconName = pair.first
+                        val icon = pair.second
+                        val isSelected = selectedIcon.first == iconName
+                        Box(
+                            modifier = Modifier.size(40.dp)
+                                .background(if (isSelected) primaryColor else surfaceContainerLow, RoundedCornerShape(10.dp))
+                                .clickable { selectedIcon = pair },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(icon, null, tint = if (isSelected) Color.White else onSurfaceVariantColor, modifier = Modifier.size(22.dp))
+                        }
+                    }
+                }
+
+                Text("Choose Color", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = onSurfaceVariantColor)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(6),
+                    modifier = Modifier.height(72.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    gridItems(availableColors) { hex ->
+                        val color = parseHexColor(hex)
+                        Box(
+                            modifier = Modifier.size(36.dp)
+                                .background(color, CircleShape)
+                                .clickable { selectedColor = hex },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (selectedColor == hex) {
+                                Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { if (name.isNotBlank()) onConfirm(name.trim(), selectedIcon.first, selectedColor) },
+                colors = ButtonDefaults.buttonColors(containerColor = primaryColor)
+            ) { Text("Create") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 fun navigateWithFade(context: android.content.Context, targetClass: Class<*>) {
-    val intent = Intent(context, targetClass).apply { 
-        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP 
-    }
+    val intent = Intent(context, targetClass).apply { flags = Intent.FLAG_ACTIVITY_CLEAR_TOP }
     val options = ActivityOptions.makeCustomAnimation(context, android.R.anim.fade_in, android.R.anim.fade_out).toBundle()
     ContextCompat.startActivity(context, intent, options)
 }
@@ -385,24 +309,14 @@ fun navigateWithFade(context: android.content.Context, targetClass: Class<*>) {
 fun CategoryBottomBar() {
     val context = LocalContext.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White)
+        modifier = Modifier.fillMaxWidth().background(Color.White)
             .shadow(24.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .navigationBarsPadding(),
-        horizontalArrangement = Arrangement.SpaceAround,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 12.dp).navigationBarsPadding(),
+        horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically
     ) {
-        BottomBarItemCategory("Home", Icons.Default.AddCircle, false) {
-            navigateWithFade(context, QuickAddActivity::class.java)
-        }
-        BottomBarItemCategory("History", Icons.Default.Refresh, false) {
-            navigateWithFade(context, HistoryActivity::class.java)
-        }
-        BottomBarItemCategory("Analytics", Icons.Default.BarChart, false) {
-            navigateWithFade(context, AnalyticsActivity::class.java)
-        }
+        BottomBarItemCategory("Home", Icons.Default.AddCircle, false) { navigateWithFade(context, QuickAddActivity::class.java) }
+        BottomBarItemCategory("History", Icons.Default.Refresh, false) { navigateWithFade(context, HistoryActivity::class.java) }
+        BottomBarItemCategory("Analytics", Icons.Default.BarChart, false) { navigateWithFade(context, AnalyticsActivity::class.java) }
         BottomBarItemCategory("Categories", Icons.Default.Category, true) {}
     }
 }
@@ -411,25 +325,13 @@ fun CategoryBottomBar() {
 fun BottomBarItemCategory(label: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+        modifier = Modifier.clip(RoundedCornerShape(16.dp))
             .background(if (isSelected) Color(0xFFEFF6FF) else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 8.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = if (isSelected) primaryContainerColor else Color.Gray,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = label.uppercase(),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (isSelected) primaryContainerColor else Color.Gray,
-            letterSpacing = 1.sp
-        )
+        Icon(icon, label, tint = if (isSelected) primaryContainerColor else Color.Gray, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(label.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+            color = if (isSelected) primaryContainerColor else Color.Gray, letterSpacing = 1.sp)
     }
 }

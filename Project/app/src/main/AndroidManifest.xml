@@ -26,6 +26,7 @@
         <activity android:name=".AnalyticsActivity" />
         <activity android:name=".HistoryActivity" />
         <activity android:name=".QuickAddActivity" />
+        <activity android:name=".SettingsActivity" />
         <activity android:name=".MainActivity" android:exported="false" />
     </application>
 

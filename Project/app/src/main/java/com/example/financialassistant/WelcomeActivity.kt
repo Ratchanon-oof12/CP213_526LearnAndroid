@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -195,6 +196,8 @@ fun WelcomeScreen(modifier: Modifier = Modifier, innerPadding: PaddingValues = P
 
 @Composable
 fun WelcomeTopBar(modifier: Modifier = Modifier) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val assistantName by rememberAssistantName()
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -203,7 +206,7 @@ fun WelcomeTopBar(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Financial Architect",
+            text = assistantName,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = onSurfaceColor
@@ -213,7 +216,7 @@ fun WelcomeTopBar(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             IconButton(
-                onClick = { /* TODO */ },
+                onClick = { context.startActivity(android.content.Intent(context, SettingsActivity::class.java)) },
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
@@ -284,8 +287,9 @@ fun AIOrb(isLoading: Boolean = false) {
 
 @Composable
 fun GreetingSection(username: String, onGetStartedClick: () -> Unit = {}) {
+    val assistantName by rememberAssistantName()
     val text1 = "Hello, $username!"
-    val text2 = "I'm your Financial Architect."
+    val text2 = "I'm your $assistantName."
     val text3 = "Let’s build your foundation of wealth through precision clarity and intentional design."
     
     var visibleChars1 by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
@@ -471,6 +475,10 @@ fun FeatureBento() {
 
 @Composable
 fun WelcomeFooter() {
+    val assistantName by rememberAssistantName()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val vm: FinancialViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -478,7 +486,7 @@ fun WelcomeFooter() {
         HorizontalDivider(color = onSurfaceVariantColor.copy(alpha = 0.15f))
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "© 2024 Financial Architect AI. All rights reserved.",
+            text = "© 2024 $assistantName AI. All rights reserved.",
             fontSize = 12.sp,
             color = onSurfaceVariantColor
         )
@@ -499,6 +507,24 @@ fun WelcomeFooter() {
                 fontWeight = FontWeight.Medium,
                 color = onSurfaceVariantColor
             )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        // Reset Button
+        OutlinedButton(
+            onClick = {
+                vm.clearAllData(context) {
+                    val intent = android.content.Intent(context, WelcomeActivity::class.java).apply {
+                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    }
+                    context.startActivity(intent)
+                }
+            },
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFBA1A1A)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBA1A1A).copy(alpha = 0.5f))
+        ) {
+            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Clear App Data", fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

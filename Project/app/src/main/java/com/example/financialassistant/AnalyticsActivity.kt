@@ -67,6 +67,8 @@ class AnalyticsActivity : ComponentActivity() {
 
 @Composable
 fun AnalyticsTopBar() {
+    val context = LocalContext.current
+    val assistantName by rememberAssistantName()
     Row(
         modifier = Modifier.fillMaxWidth().background(Color(0xE6F8FAFC))
             .statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
@@ -76,9 +78,9 @@ fun AnalyticsTopBar() {
             Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = surfaceContainerLow) {
                 Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
             }
-            Text("Financial Architect", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+            Text(assistantName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
         }
-        IconButton(onClick = {}, modifier = Modifier.size(40.dp).clip(CircleShape)) {
+        IconButton(onClick = { context.startActivity(android.content.Intent(context, SettingsActivity::class.java)) }, modifier = Modifier.size(40.dp).clip(CircleShape)) {
             Icon(Icons.Default.Settings, "Settings", tint = onSurfaceVariantColor)
         }
     }
@@ -232,29 +234,62 @@ fun MonthPicker(year: Int, month: Int, onPrevious: () -> Unit, onNext: () -> Uni
 @Composable
 fun PieChart(data: List<CategorySummary>) {
     val total = data.sumOf { it.total }
-    var startAngle = -90f
+
+    // Global sweep progress for sequential pie drawing (0f → 360f)
+    val animProgress = remember(data) { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(data) {
+        animProgress.snapTo(0f)
+        if (data.isNotEmpty()) {
+            animProgress.animateTo(
+                targetValue = 360f,
+                animationSpec = androidx.compose.animation.core.tween(
+                    durationMillis = 1500,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                )
+            )
+        }
+    }
+
+    // *** Read value OUTSIDE Canvas so Compose tracks it and triggers redraw ***
+    val currentProgress = animProgress.value
 
     Box(modifier = Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.size(200.dp)) {
             val diameter = size.minDimension
-            val radius = diameter / 2
             val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
             val arcSize = Size(diameter, diameter)
             val strokeWidth = diameter * 0.22f
 
+            var startAngle = -90f
+            var drawnSoFar = 0f // total degrees drawn so far in animation
+
             data.forEachIndexed { index, item ->
-                val sweep = ((item.total / total) * 360f).toFloat()
-                val color = pieColors[index % pieColors.size]
-                drawArc(color = color, startAngle = startAngle, sweepAngle = sweep,
-                    useCenter = false, topLeft = topLeft, size = arcSize,
-                    style = Stroke(width = strokeWidth))
-                startAngle += sweep
+                val fullSweep = ((item.total / total) * 360f).toFloat()
+                // How much of this slice the animation has reached
+                val remainingBudget = (currentProgress - drawnSoFar).coerceIn(0f, fullSweep)
+
+                if (remainingBudget > 0f) {
+                    val color = pieColors[index % pieColors.size]
+                    drawArc(
+                        color = color,
+                        startAngle = startAngle,
+                        sweepAngle = remainingBudget,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(width = strokeWidth)
+                    )
+                }
+                startAngle += fullSweep
+                drawnSoFar += fullSweep
             }
         }
-        // Center text
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Total", fontSize = 12.sp, color = onSurfaceVariantColor)
-            Text("฿${"%.0f".format(total)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+        // Center text — shown only when animation is sufficiently progressed
+        if (currentProgress > 30f) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Total", fontSize = 12.sp, color = onSurfaceVariantColor)
+                Text("฿${"%.0f".format(total)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+            }
         }
     }
 }
@@ -282,6 +317,23 @@ fun PieLegend(data: List<CategorySummary>) {
 fun BarChart(labels: List<String>, values: List<Float>) {
     val maxValue = values.maxOrNull() ?: 1f
     val barCount = values.size
+    
+    // Staggered animation states
+    val animatedProgresses = values.mapIndexed { index, _ ->
+        val progress = remember(values) { androidx.compose.animation.core.Animatable(0f) }
+        LaunchedEffect(values) {
+            progress.snapTo(0f)
+            kotlinx.coroutines.delay(index * 60L) // Staggered appearance
+            progress.animateTo(
+                targetValue = 1f, 
+                animationSpec = androidx.compose.animation.core.tween(
+                    durationMillis = 600, 
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                )
+            )
+        }
+        progress
+    }
 
     Column {
         Row(
@@ -290,23 +342,24 @@ fun BarChart(labels: List<String>, values: List<Float>) {
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             values.forEachIndexed { index, value ->
-                val fraction = if (maxValue > 0) value / maxValue else 0f
+                val animProg = animatedProgresses[index].value
+                val fraction = if (maxValue > 0) (value / maxValue) * animProg else 0f
                 val isMax = value == maxValue
                 Column(
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Bottom
                 ) {
-                    if (isMax) {
+                    if (isMax && animProg > 0.8f) { // Only show label when nearly fully grown
                         Surface(color = onSurfaceColor, shape = RoundedCornerShape(4.dp), modifier = Modifier.padding(bottom = 4.dp)) {
                             Text("฿${"%.0f".format(value)}", fontSize = 8.sp, fontWeight = FontWeight.Bold,
                                 color = Color.White, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                         }
                     }
                     Box(
-                        modifier = Modifier.weight(fraction.coerceAtLeast(0.03f), fill = false)
+                        modifier = Modifier.weight(fraction.coerceAtLeast(0.01f), fill = false)
                             .fillMaxWidth(0.85f)
-                            .fillMaxHeight(fraction.coerceAtLeast(0.03f))
+                            .fillMaxHeight(fraction.coerceAtLeast(0.01f))
                             .background(
                                 brush = if (isMax) Brush.verticalGradient(listOf(primaryContainerColor, primaryColor))
                                 else Brush.verticalGradient(listOf(primaryColor.copy(alpha = 0.25f), primaryColor.copy(alpha = 0.15f))),

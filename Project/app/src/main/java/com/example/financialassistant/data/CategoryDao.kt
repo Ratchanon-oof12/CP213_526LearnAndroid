@@ -15,6 +15,6 @@ interface CategoryDao {
     @Delete
     suspend fun deleteCategory(category: Category)
 
-    @Query("SELECT * FROM categories ORDER BY isDefault DESC, name ASC")
+    @Query("SELECT * FROM categories ORDER BY CASE WHEN LOWER(name) = 'other' THEN 1 ELSE 0 END ASC, isDefault DESC, name ASC")
     fun getAllCategories(): Flow<List<Category>>
 }

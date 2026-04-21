@@ -57,6 +57,8 @@ class HistoryActivity : ComponentActivity() {
 
 @Composable
 fun HistoryTopBar() {
+    val context = LocalContext.current
+    val assistantName by rememberAssistantName()
     Row(
         modifier = Modifier.fillMaxWidth().background(Color(0xE6F8FAFC))
             .statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
@@ -66,9 +68,9 @@ fun HistoryTopBar() {
             Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = surfaceContainerLow) {
                 Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
             }
-            Text("Financial Architect", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+            Text(assistantName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
         }
-        IconButton(onClick = {}, modifier = Modifier.size(40.dp).clip(CircleShape)) {
+        IconButton(onClick = { context.startActivity(android.content.Intent(context, SettingsActivity::class.java)) }, modifier = Modifier.size(40.dp).clip(CircleShape)) {
             Icon(Icons.Default.Settings, "Settings", tint = onSurfaceVariantColor)
         }
     }

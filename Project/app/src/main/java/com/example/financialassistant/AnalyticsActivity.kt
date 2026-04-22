@@ -32,12 +32,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.financialassistant.ai.AiClient
+import com.example.financialassistant.ai.AiInsightsCard
+import com.example.financialassistant.ai.AiInsightsRequest
+import com.example.financialassistant.ai.AiSnapshotBuilder
 import com.example.financialassistant.data.CategorySummary
 import com.example.financialassistant.data.DaySummary
 import com.example.financialassistant.data.MonthSummary
 import com.example.financialassistant.ui.theme.FinancialAssistantTheme
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.launch
 
 // Curated color palette for pie slices
 val pieColors = listOf(
@@ -69,6 +74,7 @@ class AnalyticsActivity : ComponentActivity() {
 fun AnalyticsTopBar() {
     val context = LocalContext.current
     val assistantName by rememberAssistantName()
+    val assistantIconKey by rememberAssistantIconKey()
     Row(
         modifier = Modifier.fillMaxWidth().background(Color(0xE6F8FAFC))
             .statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
@@ -76,7 +82,12 @@ fun AnalyticsTopBar() {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = surfaceContainerLow) {
-                Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
+                Icon(
+                    imageVector = assistantIconForKey(assistantIconKey),
+                    contentDescription = "Assistant Icon",
+                    tint = onSurfaceVariantColor,
+                    modifier = Modifier.padding(8.dp)
+                )
             }
             Text(assistantName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
         }
@@ -98,10 +109,56 @@ fun AnalyticsScreen(modifier: Modifier = Modifier, vm: FinancialViewModel) {
     val selectedMonth by vm.selectedMonth.collectAsState()
     var barMode by remember { mutableStateOf("DAILY") } // DAILY or MONTHLY
 
+    val assistantName by rememberAssistantName()
+    val userName by rememberUserName()
+    val aiClient = remember { AiClient() }
+    var aiLoading by remember { mutableStateOf(false) }
+    var aiError by remember { mutableStateOf<String?>(null) }
+    var aiTitle by remember { mutableStateOf("AI Insights") }
+    var aiSummary by remember { mutableStateOf("") }
+    var aiSuggestions by remember { mutableStateOf(emptyList<String>()) }
+    val scope = rememberCoroutineScope()
+
     // Month picker state
     val currentDate = remember { Calendar.getInstance() }
     var pickerYear by remember { mutableStateOf(currentDate.get(Calendar.YEAR)) }
     var pickerMonth by remember { mutableStateOf(currentDate.get(Calendar.MONTH) + 1) } // 1-based
+
+    fun refreshAiAsync() {
+        scope.launch {
+            if (!aiClient.isConfigured()) {
+                aiError =
+                    "AI not configured. Add `GEMINI_API_KEY=...` to `local.properties` (recommended) or set env var `GEMINI_API_KEY`, then Sync/Rebuild. " +
+                    "Alternatively set `AI_PROXY_BASE_URL` in `app/build.gradle.kts`."
+                return@launch
+            }
+            aiLoading = true
+            aiError = null
+            val yearMonth = "${selectedYear}-${selectedMonth}"
+            val snapshot = AiSnapshotBuilder.build(
+                yearMonth = yearMonth,
+                incomeTotal = monthlyIncome,
+                expenseTotal = monthlyExpense,
+                categoryExpenseSummary = categoryData,
+                dailyExpenseSummary = dailyData
+            )
+            val req = AiInsightsRequest(
+                kind = "analytics",
+                userName = userName.ifBlank { "there" },
+                assistantName = assistantName,
+                snapshot = snapshot
+            )
+            val res = aiClient.getInsights(req)
+            res.onSuccess {
+                aiTitle = it.title.ifBlank { "AI Insights" }
+                aiSummary = it.summary
+                aiSuggestions = it.suggestions
+            }.onFailure {
+                aiError = it.message ?: "Unknown error."
+            }
+            aiLoading = false
+        }
+    }
 
     Column(
         modifier = modifier.fillMaxSize().background(surfaceColor)
@@ -211,8 +268,19 @@ fun AnalyticsScreen(modifier: Modifier = Modifier, vm: FinancialViewModel) {
                 }
             }
         }
+        Spacer(Modifier.height(24.dp))
+
+        AiInsightsCard(
+            title = aiTitle,
+            loading = aiLoading,
+            error = aiError,
+            summary = aiSummary,
+            suggestions = aiSuggestions,
+            onRefresh = { refreshAiAsync() }
+        )
         Spacer(Modifier.height(48.dp))
     }
+
 }
 
 @Composable
@@ -316,7 +384,7 @@ fun PieLegend(data: List<CategorySummary>) {
 @Composable
 fun BarChart(labels: List<String>, values: List<Float>) {
     val maxValue = values.maxOrNull() ?: 1f
-    val barCount = values.size
+    val step = (labels.size / 6).coerceAtLeast(1)
     
     // Staggered animation states
     val animatedProgresses = values.mapIndexed { index, _ ->
@@ -352,7 +420,7 @@ fun BarChart(labels: List<String>, values: List<Float>) {
                 ) {
                     if (isMax && animProg > 0.8f) { // Only show label when nearly fully grown
                         Surface(color = onSurfaceColor, shape = RoundedCornerShape(4.dp), modifier = Modifier.padding(bottom = 4.dp)) {
-                            Text("฿${"%.0f".format(value)}", fontSize = 8.sp, fontWeight = FontWeight.Bold,
+                            Text(formatCompactMoney(value.toDouble()), fontSize = 8.sp, fontWeight = FontWeight.Bold,
                                 color = Color.White, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                         }
                     }
@@ -371,12 +439,22 @@ fun BarChart(labels: List<String>, values: List<Float>) {
         }
         Spacer(Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            labels.forEach { label ->
-                Text(label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = onSurfaceVariantColor,
+            labels.forEachIndexed { index, label ->
+                Text(if (index % step == 0 || index == labels.lastIndex) label else "", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = onSurfaceVariantColor,
                     textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
             }
         }
     }
+}
+
+fun formatCompactMoney(value: Double): String {
+    val abs = kotlin.math.abs(value)
+    val (num, suffix) = when {
+        abs >= 1_000_000 -> (value / 1_000_000.0) to "M"
+        abs >= 1_000 -> (value / 1_000.0) to "k"
+        else -> value to ""
+    }
+    return "฿${"%.1f".format(num).trimEnd('0').trimEnd('.')}$suffix"
 }
 
 @Composable
@@ -402,12 +480,13 @@ fun AnalyticsBottomBar() {
     Row(
         modifier = Modifier.fillMaxWidth().background(Color.White)
             .shadow(24.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp).navigationBarsPadding(),
+            .padding(horizontal = 8.dp, vertical = 12.dp).navigationBarsPadding(),
         horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically
     ) {
         BottomBarItemAnalytics("Home", Icons.Default.AddCircle, false) { navigateWithFadeFromAnalytics(context, QuickAddActivity::class.java) }
         BottomBarItemAnalytics("History", Icons.Default.Refresh, false) { navigateWithFadeFromAnalytics(context, HistoryActivity::class.java) }
         BottomBarItemAnalytics("Analytics", Icons.Default.BarChart, true) {}
+        BottomBarItemAnalytics("Goals", Icons.Default.Flag, false) { navigateWithFadeFromAnalytics(context, GoalActivity::class.java) }
         BottomBarItemAnalytics("Categories", Icons.Default.List, false) { navigateWithFadeFromAnalytics(context, CategoryActivity::class.java) }
     }
 }
@@ -418,11 +497,11 @@ fun BottomBarItemAnalytics(label: String, icon: ImageVector, isSelected: Boolean
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clip(RoundedCornerShape(16.dp))
             .background(if (isSelected) Color(0xFFEFF6FF) else Color.Transparent)
-            .clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 8.dp)
+            .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Icon(icon, label, tint = if (isSelected) primaryContainerColor else Color.Gray, modifier = Modifier.size(24.dp))
         Spacer(Modifier.height(4.dp))
-        Text(label.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-            color = if (isSelected) primaryContainerColor else Color.Gray, letterSpacing = 1.sp)
+        Text(label.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+            color = if (isSelected) primaryContainerColor else Color.Gray, letterSpacing = 0.8.sp)
     }
 }

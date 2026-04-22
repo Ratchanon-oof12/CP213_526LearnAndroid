@@ -81,6 +81,7 @@ class CategoryActivity : ComponentActivity() {
 fun CategoryTopBar() {
     val context = LocalContext.current
     val assistantName by rememberAssistantName()
+    val assistantIconKey by rememberAssistantIconKey()
     Row(
         modifier = Modifier.fillMaxWidth().background(Color(0xE6F8FAFC))
             .statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
@@ -88,7 +89,12 @@ fun CategoryTopBar() {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = surfaceContainerLow) {
-                Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
+                Icon(
+                    imageVector = assistantIconForKey(assistantIconKey),
+                    contentDescription = "Assistant Icon",
+                    tint = onSurfaceVariantColor,
+                    modifier = Modifier.padding(8.dp)
+                )
             }
             Text(assistantName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
         }
@@ -150,23 +156,14 @@ fun CategoryScreen(modifier: Modifier = Modifier, vm: FinancialViewModel) {
                 }
                 Button(
                     onClick = { showAddDialog = true },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.height(36.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                    modifier = Modifier.height(28.dp)
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize()
-                            .background(Brush.linearGradient(listOf(primaryColor, primaryContainerColor)), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Add Category", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                    }
+                    Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
             Spacer(Modifier.height(24.dp))
@@ -313,12 +310,13 @@ fun CategoryBottomBar() {
     Row(
         modifier = Modifier.fillMaxWidth().background(Color.White)
             .shadow(24.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp).navigationBarsPadding(),
+            .padding(horizontal = 8.dp, vertical = 12.dp).navigationBarsPadding(),
         horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically
     ) {
         BottomBarItemCategory("Home", Icons.Default.AddCircle, false) { navigateWithFade(context, QuickAddActivity::class.java) }
         BottomBarItemCategory("History", Icons.Default.Refresh, false) { navigateWithFade(context, HistoryActivity::class.java) }
         BottomBarItemCategory("Analytics", Icons.Default.BarChart, false) { navigateWithFade(context, AnalyticsActivity::class.java) }
+        BottomBarItemCategory("Goals", Icons.Default.Flag, false) { navigateWithFade(context, GoalActivity::class.java) }
         BottomBarItemCategory("Categories", Icons.Default.Category, true) {}
     }
 }
@@ -329,11 +327,11 @@ fun BottomBarItemCategory(label: String, icon: ImageVector, isSelected: Boolean,
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clip(RoundedCornerShape(16.dp))
             .background(if (isSelected) Color(0xFFEFF6FF) else Color.Transparent)
-            .clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 8.dp)
+            .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Icon(icon, label, tint = if (isSelected) primaryContainerColor else Color.Gray, modifier = Modifier.size(24.dp))
         Spacer(Modifier.height(4.dp))
-        Text(label.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-            color = if (isSelected) primaryContainerColor else Color.Gray, letterSpacing = 1.sp)
+        Text(label.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+            color = if (isSelected) primaryContainerColor else Color.Gray, letterSpacing = 0.8.sp)
     }
 }

@@ -86,23 +86,37 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun clearAllData(context: android.content.Context, onComplete: () -> Unit) {
+        clearAllDataWithSeed(context, onComplete)
+    }
+
+    fun clearAllDataWithSeed(context: android.content.Context, onComplete: () -> Unit) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             context.getSharedPreferences("financial_prefs", android.content.Context.MODE_PRIVATE).edit().clear().apply()
             db.clearAllTables()
-            // Reseed defaults since clearAllTables removes them
-            val defaults = listOf(
-                Category(name = "Food", iconName = "Restaurant", colorHex = "#E53935", isDefault = true),
-                Category(name = "Transport", iconName = "DirectionsCar", colorHex = "#1E88E5", isDefault = true),
-                Category(name = "Shopping", iconName = "ShoppingBag", colorHex = "#8E24AA", isDefault = true),
-                Category(name = "Health", iconName = "Favorite", colorHex = "#E91E63", isDefault = true),
-                Category(name = "Entertainment", iconName = "Movie", colorHex = "#F4511E", isDefault = true),
-                Category(name = "Education", iconName = "School", colorHex = "#039BE5", isDefault = true),
-                Category(name = "Utilities", iconName = "Bolt", colorHex = "#F9A825", isDefault = true),
-                Category(name = "Salary", iconName = "AccountBalance", colorHex = "#43A047", isDefault = true),
-                Category(name = "Other", iconName = "MoreHoriz", colorHex = "#757575", isDefault = true)
-            )
-            defaults.forEach { db.categoryDao().insertCategory(it) }
-            
+            seedDefaultCategories()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                onComplete()
+            }
+        }
+    }
+
+    fun clearAllDataWithoutSeed(context: android.content.Context, onComplete: () -> Unit) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            context.getSharedPreferences("financial_prefs", android.content.Context.MODE_PRIVATE).edit().clear().apply()
+            db.clearAllTables()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                onComplete()
+            }
+        }
+    }
+
+    fun clearNamesOnly(context: android.content.Context, onComplete: () -> Unit) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            context.getSharedPreferences("financial_prefs", android.content.Context.MODE_PRIVATE)
+                .edit()
+                .remove("username")
+                .remove("assistant_name")
+                .apply()
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 onComplete()
             }
@@ -122,4 +136,20 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         val sdf = SimpleDateFormat("yyyy-MM", Locale.getDefault())
         return sdf.format(Date())
     }
+
+    private suspend fun seedDefaultCategories() {
+        defaultCategories().forEach { db.categoryDao().insertCategory(it) }
+    }
+
+    private fun defaultCategories(): List<Category> = listOf(
+        Category(name = "Food", iconName = "Restaurant", colorHex = "#E53935", isDefault = true),
+        Category(name = "Transport", iconName = "DirectionsCar", colorHex = "#1E88E5", isDefault = true),
+        Category(name = "Shopping", iconName = "ShoppingBag", colorHex = "#8E24AA", isDefault = true),
+        Category(name = "Health", iconName = "Favorite", colorHex = "#E91E63", isDefault = true),
+        Category(name = "Entertainment", iconName = "Movie", colorHex = "#F4511E", isDefault = true),
+        Category(name = "Education", iconName = "School", colorHex = "#039BE5", isDefault = true),
+        Category(name = "Utilities", iconName = "Bolt", colorHex = "#F9A825", isDefault = true),
+        Category(name = "Salary", iconName = "AccountBalance", colorHex = "#43A047", isDefault = true),
+        Category(name = "Other", iconName = "MoreHoriz", colorHex = "#757575", isDefault = true)
+    )
 }

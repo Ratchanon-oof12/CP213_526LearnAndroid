@@ -59,6 +59,7 @@ class HistoryActivity : ComponentActivity() {
 fun HistoryTopBar() {
     val context = LocalContext.current
     val assistantName by rememberAssistantName()
+    val assistantIconKey by rememberAssistantIconKey()
     Row(
         modifier = Modifier.fillMaxWidth().background(Color(0xE6F8FAFC))
             .statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
@@ -66,7 +67,12 @@ fun HistoryTopBar() {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = surfaceContainerLow) {
-                Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
+                Icon(
+                    imageVector = assistantIconForKey(assistantIconKey),
+                    contentDescription = "Assistant Icon",
+                    tint = onSurfaceVariantColor,
+                    modifier = Modifier.padding(8.dp)
+                )
             }
             Text(assistantName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
         }
@@ -429,12 +435,13 @@ fun HistoryBottomBar() {
     Row(
         modifier = Modifier.fillMaxWidth().background(Color.White)
             .shadow(24.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp).navigationBarsPadding(),
+            .padding(horizontal = 8.dp, vertical = 12.dp).navigationBarsPadding(),
         horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically
     ) {
         BottomBarItemHistory("Home", Icons.Default.AddCircle, false) { navigateWithFadeFromHistory(context, QuickAddActivity::class.java) }
         BottomBarItemHistory("History", Icons.Default.Refresh, true) {}
         BottomBarItemHistory("Analytics", Icons.Default.BarChart, false) { navigateWithFadeFromHistory(context, AnalyticsActivity::class.java) }
+        BottomBarItemHistory("Goals", Icons.Default.Flag, false) { navigateWithFadeFromHistory(context, GoalActivity::class.java) }
         BottomBarItemHistory("Categories", Icons.Default.List, false) { navigateWithFadeFromHistory(context, CategoryActivity::class.java) }
     }
 }
@@ -445,11 +452,11 @@ fun BottomBarItemHistory(label: String, icon: ImageVector, isSelected: Boolean, 
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clip(RoundedCornerShape(16.dp))
             .background(if (isSelected) Color(0xFFEFF6FF) else Color.Transparent)
-            .clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 8.dp)
+            .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Icon(icon, label, tint = if (isSelected) primaryContainerColor else Color.Gray, modifier = Modifier.size(24.dp))
         Spacer(Modifier.height(4.dp))
-        Text(label.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-            color = if (isSelected) primaryContainerColor else Color.Gray, letterSpacing = 1.sp)
+        Text(label.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+            color = if (isSelected) primaryContainerColor else Color.Gray, letterSpacing = 0.8.sp)
     }
 }

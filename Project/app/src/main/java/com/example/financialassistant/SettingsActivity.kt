@@ -10,9 +10,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -69,6 +73,7 @@ fun SettingsScreen(modifier: Modifier = Modifier, onSaveComplete: () -> Unit) {
     
     var username by remember { mutableStateOf(sharedPrefs.getString("username", "") ?: "") }
     var assistantName by remember { mutableStateOf(sharedPrefs.getString("assistant_name", "Financial Architect") ?: "Financial Architect") }
+    var assistantIconKey by remember { mutableStateOf(sharedPrefs.getString("assistant_icon", "Person") ?: "Person") }
     
     Column(
         modifier = modifier
@@ -110,8 +115,47 @@ fun SettingsScreen(modifier: Modifier = Modifier, onSaveComplete: () -> Unit) {
                 unfocusedBorderColor = onSurfaceVariantColor.copy(alpha = 0.3f)
             )
         )
-        
-        Spacer(modifier = Modifier.height(48.dp))
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Assistant Profile Icon",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = onSurfaceVariantColor,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            assistantIconOptions.forEach { key ->
+                FilterChip(
+                    selected = assistantIconKey == key,
+                    onClick = { assistantIconKey = key },
+                    label = {
+                        Text(
+                            when (key) {
+                                "SmartToy" -> "Bot"
+                                "AutoGraph" -> "Graph"
+                                "AccountBalance" -> "Bank"
+                                else -> "User"
+                            },
+                            fontSize = 11.sp
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = assistantIconForKey(key),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(36.dp))
         
         // Save Button
         Button(
@@ -119,6 +163,7 @@ fun SettingsScreen(modifier: Modifier = Modifier, onSaveComplete: () -> Unit) {
                 sharedPrefs.edit().apply {
                     putString("username", username.trim())
                     putString("assistant_name", if (assistantName.isNotBlank()) assistantName.trim() else "Financial Architect")
+                    putString("assistant_icon", assistantIconKey)
                     apply()
                 }
                 onSaveComplete()

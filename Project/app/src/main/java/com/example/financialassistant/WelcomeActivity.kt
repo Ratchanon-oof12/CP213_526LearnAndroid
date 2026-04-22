@@ -16,14 +16,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -37,7 +40,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.financialassistant.ai.AiClient
+import com.example.financialassistant.ai.AiInsightsCard
+import com.example.financialassistant.ai.AiInsightsRequest
+import com.example.financialassistant.ai.AiSnapshotBuilder
 import com.example.financialassistant.ui.theme.FinancialAssistantTheme
+import kotlinx.coroutines.launch
 
 // Defining colors based on HTML tailwind config
 val primaryColor = Color(0xFF003D9B)
@@ -80,11 +88,93 @@ fun WelcomeScreen(modifier: Modifier = Modifier, innerPadding: PaddingValues = P
     
     val scrollState = rememberScrollState()
     var isLoading by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    val vm: FinancialViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+
+    val yearMonth by vm.selectedYearMonth.collectAsState()
+    val monthlyIncome by vm.monthlyIncome.collectAsState()
+    val monthlyExpense by vm.monthlyExpense.collectAsState()
+    val categoryData by vm.categoryExpenseSummary.collectAsState()
+    val dailyData by vm.dailyExpenseSummary.collectAsState()
+
+    val assistantName by rememberAssistantName()
+    val aiClient = remember { AiClient() }
+    var aiLoading by remember { mutableStateOf(false) }
+    var aiError by remember { mutableStateOf<String?>(null) }
+    var aiTitle by remember { mutableStateOf("AI Welcome") }
+    var aiSummary by remember { mutableStateOf("") }
+    var aiSuggestions by remember { mutableStateOf(emptyList<String>()) }
+    var lastAutoRequestKey by remember { mutableStateOf("") }
+    val predictiveProgress = remember(monthlyIncome, monthlyExpense) {
+        if (monthlyIncome <= 0.0) {
+            0.35f
+        } else {
+            // AI-style health score derived from current month surplus ratio.
+            ((monthlyIncome - monthlyExpense) / monthlyIncome)
+                .coerceIn(0.05, 0.98)
+                .toFloat()
+        }
+    }
+    val predictivePercent = (predictiveProgress * 100).toInt()
+    val predictiveSubtext = remember(monthlyIncome, monthlyExpense, yearMonth) {
+        if (monthlyIncome <= 0.0) {
+            "Need more income records in $yearMonth to improve predictive accuracy."
+        } else {
+            val surplus = monthlyIncome - monthlyExpense
+            "AI forecast based on $yearMonth cashflow: ฿${"%.0f".format(surplus)} surplus potential."
+        }
+    }
+
+    // Actually run refresh in a coroutine (Compose-friendly)
+    val scope = rememberCoroutineScope()
+    fun refreshAiAsync() {
+        scope.launch {
+            if (!aiClient.isConfigured()) {
+                aiError =
+                    "AI not configured. Add `GEMINI_API_KEY=...` to `local.properties` (recommended) or set env var `GEMINI_API_KEY`, then Sync/Rebuild. " +
+                    "Alternatively set `AI_PROXY_BASE_URL` in `app/build.gradle.kts`."
+                return@launch
+            }
+            aiLoading = true
+            aiError = null
+            val snapshot = AiSnapshotBuilder.build(
+                yearMonth = yearMonth,
+                incomeTotal = monthlyIncome,
+                expenseTotal = monthlyExpense,
+                categoryExpenseSummary = categoryData,
+                dailyExpenseSummary = dailyData
+            )
+            val req = AiInsightsRequest(
+                kind = "welcome",
+                userName = username.ifBlank { "there" },
+                assistantName = assistantName,
+                snapshot = snapshot
+            )
+            val res = aiClient.getInsights(req)
+            res.onSuccess {
+                aiTitle = it.title.ifBlank { "AI Welcome" }
+                aiSummary = it.summary
+                aiSuggestions = it.suggestions
+            }.onFailure {
+                aiError = it.message ?: "Unknown error."
+            }
+            aiLoading = false
+        }
+    }
     
     androidx.compose.runtime.LaunchedEffect(needsInput) {
         if (!needsInput) {
             kotlinx.coroutines.delay(1200)
             isLoading = false
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(needsInput, yearMonth, username) {
+        if (!needsInput && !isLoading) {
+            val key = "${username.ifBlank { "there" }}:$yearMonth"
+            if (lastAutoRequestKey != key && !aiLoading) {
+                lastAutoRequestKey = key
+                refreshAiAsync()
+            }
         }
     }
 
@@ -130,7 +220,20 @@ fun WelcomeScreen(modifier: Modifier = Modifier, innerPadding: PaddingValues = P
             Column(modifier = Modifier.alpha(contentAlpha), horizontalAlignment = Alignment.CenterHorizontally) {
                 GreetingSection(username = username, onGetStartedClick = onGetStartedClick)
                 Spacer(modifier = Modifier.height(48.dp))
-                FeatureBento()
+                AiInsightsCard(
+                    title = aiTitle,
+                    loading = aiLoading,
+                    error = aiError,
+                    summary = aiSummary,
+                    suggestions = aiSuggestions,
+                    onRefresh = { refreshAiAsync() }
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                FeatureBento(
+                    predictiveProgress = predictiveProgress,
+                    predictivePercent = predictivePercent,
+                    predictiveSubtext = predictiveSubtext
+                )
                 Spacer(modifier = Modifier.height(48.dp))
                 WelcomeFooter()
                 Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 24.dp))
@@ -198,6 +301,7 @@ fun WelcomeScreen(modifier: Modifier = Modifier, innerPadding: PaddingValues = P
 fun WelcomeTopBar(modifier: Modifier = Modifier) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val assistantName by rememberAssistantName()
+    val assistantIconKey by rememberAssistantIconKey()
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -205,41 +309,28 @@ fun WelcomeTopBar(modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = assistantName,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = onSurfaceColor
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = surfaceContainerLow) {
+                Icon(
+                    imageVector = assistantIconForKey(assistantIconKey),
+                    contentDescription = "Assistant Icon",
+                    tint = onSurfaceVariantColor,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+            Text(assistantName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+        }
+        IconButton(
+            onClick = { context.startActivity(android.content.Intent(context, SettingsActivity::class.java)) },
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
         ) {
-            IconButton(
-                onClick = { context.startActivity(android.content.Intent(context, SettingsActivity::class.java)) },
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
-                    tint = onSurfaceVariantColor
-                )
-            }
-            
-            Surface(
-                modifier = Modifier.size(32.dp),
-                shape = CircleShape,
-                color = Color.LightGray
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Profile Picture",
-                    tint = Color.Gray,
-                    modifier = Modifier.padding(4.dp)
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = onSurfaceVariantColor
+            )
         }
     }
 }
@@ -296,7 +387,10 @@ fun GreetingSection(username: String, onGetStartedClick: () -> Unit = {}) {
     var visibleChars2 by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     var visibleChars3 by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    androidx.compose.runtime.LaunchedEffect(text1, text2, text3) {
+        visibleChars1 = 0
+        visibleChars2 = 0
+        visibleChars3 = 0
         kotlinx.coroutines.delay(1000) // Wait for splash to shrink
         for (i in 1..text1.length) {
             visibleChars1 = i
@@ -379,7 +473,11 @@ fun GreetingSection(username: String, onGetStartedClick: () -> Unit = {}) {
 }
 
 @Composable
-fun FeatureBento() {
+fun FeatureBento(
+    predictiveProgress: Float,
+    predictivePercent: Int,
+    predictiveSubtext: String
+) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxWidth()
@@ -407,13 +505,33 @@ fun FeatureBento() {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "I analyze your spending patterns to forecast future savings opportunities before you even think of them.",
+                    text = predictiveSubtext,
                     fontSize = 14.sp,
                     color = onSurfaceVariantColor
                 )
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                // Progress bar mock
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "AI forecast confidence",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = onSurfaceVariantColor
+                    )
+                    Text(
+                        text = "$predictivePercent%",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = primaryColor
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // AI-calculated progress bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -422,7 +540,7 @@ fun FeatureBento() {
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.75f)
+                            .fillMaxWidth(predictiveProgress)
                             .fillMaxHeight()
                             .background(
                                 brush = Brush.horizontalGradient(
@@ -432,42 +550,6 @@ fun FeatureBento() {
                             )
                     )
                 }
-            }
-        }
-        
-        // Card 2
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = surfaceContainerLow,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(primaryColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = primaryColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Bank-Grade Security",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = onSurfaceColor
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Your data is encrypted using architectural standards of precision. Safe, secure, and invisible.",
-                    fontSize = 14.sp,
-                    color = onSurfaceVariantColor
-                )
             }
         }
     }
@@ -509,22 +591,63 @@ fun WelcomeFooter() {
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        // Reset Button
-        OutlinedButton(
-            onClick = {
-                vm.clearAllData(context) {
-                    val intent = android.content.Intent(context, WelcomeActivity::class.java).apply {
-                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    }
-                    context.startActivity(intent)
-                }
-            },
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFBA1A1A)),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBA1A1A).copy(alpha = 0.5f))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Clear App Data", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            OutlinedButton(
+                onClick = {
+                    vm.clearAllDataWithSeed(context) {
+                        val intent = android.content.Intent(context, WelcomeActivity::class.java).apply {
+                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                        context.startActivity(intent)
+                    }
+                },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFBA1A1A)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBA1A1A).copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Delete All Info + Seed Data", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
+            OutlinedButton(
+                onClick = {
+                    vm.clearAllDataWithoutSeed(context) {
+                        val intent = android.content.Intent(context, WelcomeActivity::class.java).apply {
+                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                        context.startActivity(intent)
+                    }
+                },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFBA1A1A)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBA1A1A).copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Delete All Info (No Seed)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
+            OutlinedButton(
+                onClick = {
+                    vm.clearNamesOnly(context) {
+                        val intent = android.content.Intent(context, WelcomeActivity::class.java).apply {
+                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                        context.startActivity(intent)
+                    }
+                },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = primaryColor),
+                border = androidx.compose.foundation.BorderStroke(1.dp, primaryColor.copy(alpha = 0.45f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Delete Username + Financial Name", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

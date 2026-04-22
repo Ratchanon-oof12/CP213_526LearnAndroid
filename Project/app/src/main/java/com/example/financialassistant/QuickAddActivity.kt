@@ -63,6 +63,7 @@ class QuickAddActivity : ComponentActivity() {
 fun QuickAddTopBar() {
     val context = LocalContext.current
     val assistantName by rememberAssistantName()
+    val assistantIconKey by rememberAssistantIconKey()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -77,7 +78,12 @@ fun QuickAddTopBar() {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = surfaceContainerLow) {
-                Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(8.dp))
+                Icon(
+                    imageVector = assistantIconForKey(assistantIconKey),
+                    contentDescription = "Assistant Icon",
+                    tint = onSurfaceVariantColor,
+                    modifier = Modifier.padding(8.dp)
+                )
             }
             Text(assistantName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
         }
@@ -235,36 +241,44 @@ fun IncomeExpenseToggle(isExpense: Boolean, onToggle: (Boolean) -> Unit) {
 
 @Composable
 fun AmountInput(amountText: String, isExpense: Boolean, onValueChange: (String) -> Unit) {
+    val amountFontSize = when {
+        amountText.length >= 13 -> 30.sp
+        amountText.length >= 10 -> 38.sp
+        amountText.length >= 8 -> 48.sp
+        else -> 64.sp
+    }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("TRANSACTION AMOUNT", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
             color = onSurfaceVariantColor, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = if (isExpense) "-฿" else "+฿",
-                fontSize = 36.sp, fontWeight = FontWeight.Bold,
-                color = if (isExpense) Color(0xFFBA1A1A).copy(alpha = 0.5f) else primaryColor.copy(alpha = 0.5f)
-            )
-            TextField(
-                value = amountText,
-                onValueChange = { v -> if (v.matches(Regex("^\\d*\\.?\\d{0,2}$"))) onValueChange(v) },
-                placeholder = { Text("0.00", fontSize = 64.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFE0E3E5)) },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent
-                ),
-                textStyle = LocalTextStyle.current.copy(
-                    fontSize = 64.sp, fontWeight = FontWeight.ExtraBold,
-                    color = if (isExpense) Color(0xFFBA1A1A) else primaryColor,
-                    textAlign = TextAlign.Center
-                ),
-                singleLine = true,
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
-                ),
-                modifier = Modifier.width(200.dp)
-            )
-        }
+        TextField(
+            value = amountText,
+            onValueChange = { v -> if (v.matches(Regex("^\\d*\\.?\\d{0,2}$"))) onValueChange(v) },
+            prefix = {
+                Text(
+                    text = if (isExpense) "-฿" else "+฿",
+                    fontSize = amountFontSize,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (isExpense) Color(0xFFBA1A1A).copy(alpha = 0.45f) else primaryColor.copy(alpha = 0.45f)
+                )
+            },
+            placeholder = { Text("0.00", fontSize = amountFontSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFFE0E3E5)) },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent
+            ),
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = amountFontSize, fontWeight = FontWeight.ExtraBold,
+                color = if (isExpense) Color(0xFFBA1A1A) else primaryColor,
+                textAlign = TextAlign.Start
+            ),
+            singleLine = true,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -398,12 +412,13 @@ fun QuickAddBottomBar() {
     Row(
         modifier = Modifier.fillMaxWidth().background(Color.White)
             .shadow(24.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp).navigationBarsPadding(),
+            .padding(horizontal = 8.dp, vertical = 12.dp).navigationBarsPadding(),
         horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically
     ) {
         BottomBarItem("Home", Icons.Default.AddCircle, true) {}
         BottomBarItem("History", Icons.Default.Refresh, false) { navigateWithFadeFromQuickAdd(context, HistoryActivity::class.java) }
         BottomBarItem("Analytics", Icons.Default.BarChart, false) { navigateWithFadeFromQuickAdd(context, AnalyticsActivity::class.java) }
+        BottomBarItem("Goals", Icons.Default.Flag, false) { navigateWithFadeFromQuickAdd(context, GoalActivity::class.java) }
         BottomBarItem("Categories", Icons.Default.List, false) { navigateWithFadeFromQuickAdd(context, CategoryActivity::class.java) }
     }
 }
@@ -414,11 +429,11 @@ fun BottomBarItem(label: String, icon: ImageVector, isSelected: Boolean, onClick
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clip(RoundedCornerShape(16.dp))
             .background(if (isSelected) Color(0xFFEFF6FF) else Color.Transparent)
-            .clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 8.dp)
+            .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Icon(imageVector = icon, contentDescription = label, tint = if (isSelected) primaryContainerColor else Color.Gray, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.height(4.dp))
-        Text(label.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-            color = if (isSelected) primaryContainerColor else Color.Gray, letterSpacing = 1.sp)
+        Text(label.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+            color = if (isSelected) primaryContainerColor else Color.Gray, letterSpacing = 0.8.sp)
     }
 }

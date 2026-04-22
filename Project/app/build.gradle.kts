@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+import java.util.Properties
+
 android {
     namespace = "com.example.financialassistant"
     compileSdk {
@@ -18,6 +20,21 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Set this to your deployed proxy base URL, e.g. "https://your-worker.example.com"
+        buildConfigField("String", "AI_PROXY_BASE_URL", "\"\"")
+
+        // Gemini API key (Google AI Studio). Keep it out of git:
+        // - Put GEMINI_API_KEY=... in local.properties, OR
+        // - Set env var GEMINI_API_KEY for your Gradle process.
+        val localProps = Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) f.inputStream().use { load(it) }
+        }
+        val geminiKey = (System.getenv("GEMINI_API_KEY") ?: localProps.getProperty("GEMINI_API_KEY") ?: "").trim()
+        val geminiModel = (System.getenv("GEMINI_MODEL") ?: localProps.getProperty("GEMINI_MODEL") ?: "gemini-2.0-flash").trim()
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiKey\"")
+        buildConfigField("String", "GEMINI_MODEL", "\"$geminiModel\"")
     }
 
     buildTypes {
@@ -35,6 +52,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

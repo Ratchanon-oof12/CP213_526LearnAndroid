@@ -1,8 +1,0 @@
-name = "financialassistant-ai-proxy"
-main = "worker.js"
-compatibility_date = "2026-04-21"
-
-[vars]
-# Google AI Studio (Gemini API) model id for "Gemma 4 26B A4B IT".
-MODEL = "gemma-4-26b-a4b-it"
-

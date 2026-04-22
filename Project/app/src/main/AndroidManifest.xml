@@ -30,7 +30,6 @@
         <activity android:name=".QuickAddActivity" />
         <activity android:name=".GoalActivity" />
         <activity android:name=".SettingsActivity" />
-        <activity android:name=".MainActivity" android:exported="false" />
     </application>
 
 </manifest>

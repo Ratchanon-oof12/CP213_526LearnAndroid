@@ -19,7 +19,25 @@
 
 ---
 
-## 2) โครงสร้างภายใน `Project/`
+## 2) Tech Stack
+
+| หมวดหมู่ | เทคโนโลยี |
+|---|---|
+| **ภาษา** | Kotlin |
+| **UI Framework** | Jetpack Compose + Material 3 |
+| **ฐานข้อมูล** | Room (SQLite) |
+| **AI / LLM** | Google Gemini API (`gemini-2.0-flash`) |
+| **Architecture** | MVVM (ViewModel + StateFlow) |
+| **Async** | Kotlin Coroutines |
+| **DI / Build** | KSP (Kotlin Symbol Processing) |
+| **Min SDK** | 35 (Android 15) |
+| **Target SDK** | 36 |
+| **Build System** | Gradle (Kotlin DSL) |
+| **Testing** | JUnit 4, Espresso, Compose UI Test |
+
+---
+
+## 3) โครงสร้างภายใน `Project/`
 
 ```text
 Project/

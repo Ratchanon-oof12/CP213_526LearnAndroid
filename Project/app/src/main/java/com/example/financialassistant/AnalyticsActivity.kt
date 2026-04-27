@@ -257,13 +257,27 @@ fun AnalyticsScreen(modifier: Modifier = Modifier, vm: FinancialViewModel) {
                     if (dailyData.isEmpty()) {
                         EmptyChartPlaceholder()
                     } else {
-                        BarChart(labels = dailyData.map { it.day }, values = dailyData.map { it.total.toFloat() })
+                        BarChart(
+                            labels = dailyData.map { it.day },
+                            values = dailyData.map { it.total.toFloat() },
+                            dialogTitlePrefix = "Day",
+                            showAllLabels = true
+                        )
                     }
                 } else {
                     if (monthlyData.isEmpty()) {
                         EmptyChartPlaceholder()
                     } else {
-                        BarChart(labels = monthlyData.map { it.month.takeLast(2) }, values = monthlyData.map { it.total.toFloat() })
+                        val monthAbbrevs = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+                        BarChart(
+                            labels = monthlyData.map { entry ->
+                                val m = entry.month.takeLast(2).trimStart('0').toIntOrNull() ?: 0
+                                monthAbbrevs.getOrElse(m - 1) { entry.month.takeLast(2) }
+                            },
+                            values = monthlyData.map { it.total.toFloat() },
+                            dialogTitlePrefix = "Month",
+                            showAllLabels = true
+                        )
                     }
                 }
             }
@@ -382,20 +396,35 @@ fun PieLegend(data: List<CategorySummary>) {
 }
 
 @Composable
-fun BarChart(labels: List<String>, values: List<Float>) {
+fun BarChart(
+    labels: List<String>,
+    values: List<Float>,
+    dialogTitlePrefix: String = "",
+    showAllLabels: Boolean = false
+) {
     val maxValue = values.maxOrNull() ?: 1f
-    val step = (labels.size / 6).coerceAtLeast(1)
-    
+    val count = labels.size
+
+    // showAllLabels=true → show every label (used for monthly 12-bar mode)
+    // Otherwise aim for ~6 visible labels, evenly spaced
+    val maxVisible = 6
+    val step = if (showAllLabels) 1
+               else if (count <= maxVisible) 1
+               else Math.ceil(count.toDouble() / maxVisible).toInt()
+
+    // Selected bar for detail dialog
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+
     // Staggered animation states
     val animatedProgresses = values.mapIndexed { index, _ ->
         val progress = remember(values) { androidx.compose.animation.core.Animatable(0f) }
         LaunchedEffect(values) {
             progress.snapTo(0f)
-            kotlinx.coroutines.delay(index * 60L) // Staggered appearance
+            kotlinx.coroutines.delay(index * 60L)
             progress.animateTo(
-                targetValue = 1f, 
+                targetValue = 1f,
                 animationSpec = androidx.compose.animation.core.tween(
-                    durationMillis = 600, 
+                    durationMillis = 600,
                     easing = androidx.compose.animation.core.FastOutSlowInEasing
                 )
             )
@@ -413,24 +442,41 @@ fun BarChart(labels: List<String>, values: List<Float>) {
                 val animProg = animatedProgresses[index].value
                 val fraction = if (maxValue > 0) (value / maxValue) * animProg else 0f
                 val isMax = value == maxValue
+                val isSelected = selectedIndex == index
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { selectedIndex = index },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Bottom
                 ) {
-                    if (isMax && animProg > 0.8f) { // Only show label when nearly fully grown
-                        Surface(color = onSurfaceColor, shape = RoundedCornerShape(4.dp), modifier = Modifier.padding(bottom = 4.dp)) {
-                            Text(formatCompactMoney(value.toDouble()), fontSize = 8.sp, fontWeight = FontWeight.Bold,
-                                color = Color.White, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
-                        }
+                    // Highlight dot for selected bar
+                    if (isSelected && animProg > 0.5f) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(primaryColor, CircleShape)
+                                .padding(bottom = 2.dp)
+                        )
+                        Spacer(Modifier.height(2.dp))
                     }
                     Box(
-                        modifier = Modifier.weight(fraction.coerceAtLeast(0.01f), fill = false)
+                        modifier = Modifier
+                            .weight(fraction.coerceAtLeast(0.01f), fill = false)
                             .fillMaxWidth(0.85f)
                             .fillMaxHeight(fraction.coerceAtLeast(0.01f))
                             .background(
-                                brush = if (isMax) Brush.verticalGradient(listOf(primaryContainerColor, primaryColor))
-                                else Brush.verticalGradient(listOf(primaryColor.copy(alpha = 0.25f), primaryColor.copy(alpha = 0.15f))),
+                                brush = when {
+                                    isSelected -> Brush.verticalGradient(
+                                        listOf(Color(0xFFFFD54F), Color(0xFFF9A825))
+                                    )
+                                    isMax -> Brush.verticalGradient(
+                                        listOf(primaryContainerColor, primaryColor)
+                                    )
+                                    else -> Brush.verticalGradient(
+                                        listOf(primaryColor.copy(alpha = 0.25f), primaryColor.copy(alpha = 0.15f))
+                                    )
+                                },
                                 shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
                             )
                     )
@@ -438,12 +484,90 @@ fun BarChart(labels: List<String>, values: List<Float>) {
             }
         }
         Spacer(Modifier.height(8.dp))
+        // X-axis labels: show every `step` label
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             labels.forEachIndexed { index, label ->
-                Text(if (index % step == 0 || index == labels.lastIndex) label else "", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = onSurfaceVariantColor,
-                    textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                val show = index % step == 0 || index == labels.lastIndex
+                Text(
+                    text = if (show) label else "",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selectedIndex == index) primaryColor else onSurfaceVariantColor,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
+    }
+
+    // Detail dialog when a bar is tapped
+    selectedIndex?.let { idx ->
+        val label = labels.getOrElse(idx) { "" }
+        val value = values.getOrElse(idx) { 0f }
+        AlertDialog(
+            onDismissRequest = { selectedIndex = null },
+            confirmButton = {
+                TextButton(onClick = { selectedIndex = null }) {
+                    Text("Close", color = primaryColor, fontWeight = FontWeight.Bold)
+                }
+            },
+            title = {
+                Text(
+                    text = if (dialogTitlePrefix.isNotBlank()) "$dialogTitlePrefix $label" else label,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 18.sp,
+                    color = onSurfaceColor
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Divider(color = onSurfaceVariantColor.copy(alpha = 0.15f))
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Total Expense", fontSize = 14.sp, color = onSurfaceVariantColor)
+                        Text(
+                            text = "฿${"%.2f".format(value)}",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (value == maxValue) primaryColor else onSurfaceColor
+                        )
+                    }
+                    if (value == maxValue && values.size > 1) {
+                        Surface(
+                            color = primaryColor.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "🏆 Highest spending period",
+                                fontSize = 12.sp,
+                                color = primaryColor,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                    val pct = if (maxValue > 0) (value / maxValue * 100).toInt() else 0
+                    Spacer(Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { (value / maxValue).coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                        color = if (value == maxValue) primaryColor else primaryColor.copy(alpha = 0.6f),
+                        trackColor = onSurfaceVariantColor.copy(alpha = 0.1f)
+                    )
+                    Text(
+                        text = "$pct% of peak spending",
+                        fontSize = 11.sp,
+                        color = onSurfaceVariantColor
+                    )
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = surfaceContainerLowest
+        )
     }
 }
 

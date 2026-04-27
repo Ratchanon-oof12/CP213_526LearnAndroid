@@ -50,11 +50,11 @@ import kotlinx.coroutines.launch
 // Defining colors based on HTML tailwind config
 val primaryColor = Color(0xFF003D9B)
 val primaryContainerColor = Color(0xFF0052CC)
-val surfaceColor = Color(0xFFF7F9FB)
-val onSurfaceColor = Color(0xFF191C1E)
-val onSurfaceVariantColor = Color(0xFF434654)
-val surfaceContainerLowest = Color(0xFFFFFFFF)
-val surfaceContainerLow = Color(0xFFF2F4F6)
+val surfaceColor = Color(0xFFEDF2F7)          // slightly darker than before
+val onSurfaceColor = Color(0xFF0D1117)         // near black, more contrast
+val onSurfaceVariantColor = Color(0xFF374151)  // darker grey for labels/subtext
+val surfaceContainerLowest = Color(0xFFF5F8FF) // subtle blue tint instead of pure white
+val surfaceContainerLow = Color(0xFFE8EEF6)    // slightly more visible card bg
 
 class WelcomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

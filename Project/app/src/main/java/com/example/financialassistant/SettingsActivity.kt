@@ -52,7 +52,7 @@ fun SettingsTopBar(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xE6F8FAFC))
+            .background(Color(0xFFDCE8F5))
             .statusBarsPadding()
             .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -83,22 +83,24 @@ fun SettingsScreen(modifier: Modifier = Modifier, onSaveComplete: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Icon
-        Surface(modifier = Modifier.size(80.dp), shape = CircleShape, color = primaryColor.copy(alpha = 0.1f)) {
+        Surface(modifier = Modifier.size(80.dp), shape = CircleShape, color = primaryColor.copy(alpha = 0.18f)) {
             Icon(Icons.Default.Settings, null, tint = primaryColor, modifier = Modifier.padding(20.dp))
         }
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         // Form
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
-            label = { Text("Your Name") },
+            label = { Text("Your Name", color = onSurfaceVariantColor) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = primaryColor,
-                unfocusedBorderColor = onSurfaceVariantColor.copy(alpha = 0.3f)
+                unfocusedBorderColor = onSurfaceVariantColor.copy(alpha = 0.55f),
+                focusedTextColor = onSurfaceColor,
+                unfocusedTextColor = onSurfaceColor
             )
         )
         Spacer(modifier = Modifier.height(20.dp))
@@ -106,13 +108,15 @@ fun SettingsScreen(modifier: Modifier = Modifier, onSaveComplete: () -> Unit) {
         OutlinedTextField(
             value = assistantName,
             onValueChange = { assistantName = it },
-            label = { Text("Assistant Name") },
+            label = { Text("Assistant Name", color = onSurfaceVariantColor) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = primaryColor,
-                unfocusedBorderColor = onSurfaceVariantColor.copy(alpha = 0.3f)
+                unfocusedBorderColor = onSurfaceVariantColor.copy(alpha = 0.55f),
+                focusedTextColor = onSurfaceColor,
+                unfocusedTextColor = onSurfaceColor
             )
         )
 

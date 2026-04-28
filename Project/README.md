@@ -26,7 +26,7 @@
 | **ภาษา** | Kotlin |
 | **UI Framework** | Jetpack Compose + Material 3 |
 | **ฐานข้อมูล** | Room (SQLite) |
-| **AI / LLM** | Google Gemini API (`gemini-2.0-flash`) |
+| **AI / LLM** | Google Gemini API (`gemma 4`) |
 | **Architecture** | MVVM (ViewModel + StateFlow) |
 | **Async** | Kotlin Coroutines |
 | **DI / Build** | KSP (Kotlin Symbol Processing) |
